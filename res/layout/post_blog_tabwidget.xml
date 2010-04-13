@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:orientation="vertical"
+	android:layout_width="fill_parent"
+	android:layout_height="fill_parent"
+	android:padding="5dip"
+	>
+	
+	<TextView
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:text="Title:"
+		android:textStyle="bold"
+		/>
+	<EditText android:id="@+id/postOrShare_blog_title"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		/>
+	<TextView
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:text="Blog content:"
+		android:textStyle="bold"
+		/>
+	<EditText android:id="@+id/postOrShare_blog_content"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		/>
+	<CheckBox android:id="@+id/postOrShare_blog_isTweet"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:paddingTop="10dip"
+		android:text="Also post in Twitter"
+	/>
+	<Button android:id="@+id/postOrShare_blog_postButton"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:text="Post"
+		/>
+	
+</LinearLayout>

@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:orientation="vertical"
+	android:layout_width="fill_parent"
+	android:layout_height="fill_parent"
+	android:padding="5dip"
+	>
+	
+	<TextView
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:text="Title:"
+		android:textStyle="bold"
+		/>
+	<EditText android:id="@+id/postOrShare_link_title"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		/>
+	<TextView
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:text="Picture:"
+		android:textStyle="bold"
+		android:paddingTop="10dip"
+		/>
+	<RadioGroup
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:orientation="horizontal"
+		>
+		
+		<RadioButton android:id="@+id/postOrShare_picture_byUpload"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:text="Upload a picture"
+			android:checked="true"
+			/>
+		<RadioButton android:id="@+id/postOrShare_picture_byUrl"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:text="Use URL"
+			/>
+		
+	</RadioGroup>
+	<EditText android:id="@+id/postOrShare_picture_url"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:visibility="gone"
+		/>
+	<FrameLayout android:id="@+id/postOrShare_picture_uploadFrame"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		>
+		
+		<LinearLayout 
+			android:orientation="vertical"
+			android:layout_width="fill_parent"
+			android:layout_height="wrap_content"
+			>
+			
+			<Button android:id="@+id/postOrShare_picture_chooseButton"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:text="Choose picture"
+				/>
+			<TextView android:id="@+id/postOrShare_picture_displayFileName"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:textStyle="italic"
+				/>
+			<ImageView android:id="@+id/postOrShare_picture_display"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:maxWidth="128px"
+				android:maxHeight="128px"
+				android:adjustViewBounds="true"
+				android:scaleType="centerInside"
+				android:layout_gravity="center_horizontal"
+				android:padding="5dip"
+				/>
+				
+		</LinearLayout>
+		
+	</FrameLayout>	
+	<TextView
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:text="Note:"
+		android:textStyle="bold"
+		android:paddingTop="10dip"
+		/>
+	<EditText android:id="@+id/postOrShare_picture_note"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		/>
+	<CheckBox android:id="@+id/postOrShare_picture_isTweet"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:paddingTop="10dip"
+		android:text="Also post in Twitter"
+	/>
+	<Button android:id="@+id/postOrShare_picture_postButton"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:text="Post"
+		/>
+	
+</LinearLayout>

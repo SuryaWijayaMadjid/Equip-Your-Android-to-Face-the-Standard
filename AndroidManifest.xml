@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+      package="net.betavinechronicle.client.android"
+      android:versionCode="1"
+      android:versionName="1.0">
+    <application android:icon="@drawable/icon" 
+    			 android:label="@string/app_name" 
+    			 android:debuggable="true"
+    			 >
+        <activity android:name=".UserStream"
+                  android:label="User Stream - Betavine Chronicle Client"
+                  android:configChanges="orientation|keyboardHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".EditProfile"
+                  android:label="Edit Profile - Betavine Chronicle Client"
+                  android:configChanges="orientation|keyboardHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </activity>
+		<activity android:name=".PostOrShare"
+                  android:label="Post/Share - Betavine Chronicle Client"
+                  android:configChanges="orientation|keyboardHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".PostStatus"
+                  android:label="Post Status - Betavine Chronicle Client">
+        </activity>
+        <activity android:name=".PostBlog"
+                  android:label="Post Blog - Betavine Chronicle Client">.
+        </activity>
+        <activity android:name=".ShareLink"
+                  android:label="Share Link - Betavine Chronicle Client">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />                
+            	<category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".SharePicture"
+                  android:label="Share Picture - Betavine Chronicle Client">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/jpeg" />
+                <data android:mimeType="image/png" />
+                <data android:mimeType="image/gif" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".ShareAudio"
+                  android:label="Share Audio - Betavine Chronicle Client">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="audio/mp3" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".ShareVideo"
+                  android:label="Share Video - Betavine Chronicle Client">
+        </activity>
+    </application>
+    <uses-sdk android:minSdkVersion="4" />
+	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"></uses-permission>
+	<uses-permission android:name="android.permission.INTERNET"></uses-permission>
+</manifest> 

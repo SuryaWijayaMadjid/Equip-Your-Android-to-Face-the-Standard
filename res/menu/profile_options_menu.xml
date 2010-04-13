@@ -1,0 +1,11 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+	<item android:id="@+id/profile_options_userStream"
+		  android:title="User stream"
+		  />
+	<item android:id="@+id/profile_options_postOrShare"
+		  android:title="Post/share"
+		  />
+	<item android:id="@+id/profile_options_exit"
+		  android:title="Exit"
+		  />
+</menu>

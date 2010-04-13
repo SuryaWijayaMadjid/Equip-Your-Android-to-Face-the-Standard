@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:orientation="vertical"
+	android:layout_width="fill_parent"
+	android:layout_height="fill_parent"
+	android:padding="5dip"
+	>
+	
+	<TextView
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:text="Title:"
+		android:textStyle="bold"
+		/>
+	<EditText android:id="@+id/postOrShare_video_title"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		/>
+	<TextView
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:text="Embed code:"
+		android:textStyle="bold"
+		/>
+	<EditText android:id="@+id/postOrShare_video_link"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		/>
+	<TextView
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:text="(You can post any content that can be 'embedded')"
+		android:paddingBottom="10dip"
+		android:textStyle="italic"
+		/>
+	<TextView
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:text="Note:"
+		android:textStyle="bold"
+		/>
+	<EditText android:id="@+id/postOrShare_video_note"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		/>
+	<CheckBox android:id="@+id/postOrShare_video_isTweet"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:paddingTop="10dip"
+		android:text="Also post in Twitter"
+	/>
+	<Button android:id="@+id/postOrShare_video_postButton"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:text="Post"
+		/>
+	
+</LinearLayout>

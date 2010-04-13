@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="fill_parent"
+	android:layout_height="60dip"
+	android:padding="5dip"
+	>
+	
+	<ImageView android:id="@+id/userStream_listItem_typeIcon"
+		android:layout_width="40dip"
+		android:layout_height="25dip"
+		android:layout_alignParentLeft="true"
+		android:layout_alignParentTop="true"
+		android:scaleType="centerInside"
+		/>
+	<ImageView android:id="@+id/userStream_listItem_sourceIcon"
+		android:layout_width="40dip"
+		android:layout_height="25dip"
+		android:layout_below="@id/userStream_listItem_typeIcon"
+		android:layout_alignParentLeft="true"
+		android:layout_alignWithParentIfMissing="true"
+		android:scaleType="centerInside"
+		/>
+	<TextView android:id="@+id/userStream_listItem_title"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:layout_toRightOf="@id/userStream_listItem_typeIcon"
+		android:layout_alignParentTop="true"
+		android:layout_weight="1"
+		android:paddingTop="3dip"
+		android:paddingBottom="3dip"
+		android:textStyle="bold"
+		/>
+	<TextView android:id="@+id/userStream_listItem_content"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:layout_toRightOf="@id/userStream_listItem_typeIcon"
+		android:layout_below="@id/userStream_listItem_title"
+		android:layout_weight="1"
+		android:paddingLeft="10dip"
+		/>
+		
+</RelativeLayout>
