@@ -9,6 +9,8 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 
+
+
 public class HttpTasks extends Thread {
 
 	static final int HTTP_GET = 1;
@@ -19,44 +21,41 @@ public class HttpTasks extends Thread {
 	private HttpClient mHttpClient;
 	private HttpResponse mHttpResponse;
 	
-	private StringEntity xmlEntity_;	
-	private int httpMode_;
+	private StringEntity mXmlEntity;	
+	private int mHttpMode;
+	private String mExceptionMessage = "";
 	
 	public HttpTasks (String targetUri, int httpMode) {
 		
-		httpMode_ = httpMode;
-		xmlEntity_ = null;
-		mHttpResponse = null;
-		mHttpGet = null;
-		mHttpPost = null;
+		mHttpMode = httpMode;
 		mHttpClient = new DefaultHttpClient();
 		
-		if (httpMode == this.HTTP_GET) mHttpGet = new HttpGet(targetUri);
-		else if (httpMode == this.HTTP_POST) mHttpPost = new HttpPost(targetUri);		
+		if (httpMode == HttpTasks.HTTP_GET) mHttpGet = new HttpGet(targetUri);
+		else if (httpMode == HttpTasks.HTTP_POST) mHttpPost = new HttpPost(targetUri);		
 	}
 	
+	// Set the entity that we want to send along with the post method
 	public void setStringEntity (StringEntity stringEntity, String contentType) {
-		xmlEntity_ = stringEntity;
-		xmlEntity_.setContentType(contentType);
+		mXmlEntity = stringEntity;
+		mXmlEntity.setContentType(contentType);
 	}
 	
 	@Override
 	public void run() {
 		
-		switch (httpMode_) {
+		switch (mHttpMode) {
 		
 		case HTTP_GET:
-			//mHttpGet.addHeader("Accept", "text/atom+xml");
+			mHttpGet.addHeader("Accept", "text/atom+xml");
 			
 			try {
 				mHttpResponse = mHttpClient.execute(mHttpGet);
 			}
 			catch (IOException ex) {
-				//TODO: exception handling
-				
+				mExceptionMessage = ex.getMessage();
 			}
 			catch (Exception ex) {
-				//TODO: exception handling
+				mExceptionMessage = ex.getMessage();
 			}
 			
 			break;
@@ -66,18 +65,16 @@ public class HttpTasks extends Thread {
 			mHttpPost.addHeader("Authorization", "Basic authorization");
 			mHttpPost.addHeader("Content-Type", "application/atom+xml");
 			    			
-			mHttpPost.setEntity(xmlEntity_);
+			mHttpPost.setEntity(mXmlEntity);
 	    			
 			try {
 				mHttpResponse = mHttpClient.execute(mHttpPost);
-
 			}
 			catch (IOException ex) {
-				//TODO: exception handling
-
+				mExceptionMessage = ex.getMessage();
 			}
 			catch (Exception ex) {
-				//TODO: exception handling
+				mExceptionMessage = ex.getMessage();
 			}
 			
 			break;
@@ -86,5 +83,13 @@ public class HttpTasks extends Thread {
 	
 	public HttpResponse getHttpResponse() {
 		return mHttpResponse;
+	}
+	
+	public boolean hasHttpResponse() {
+		return (mHttpResponse != null);
+	}
+	
+	public String getExceptionMessage() {
+		return mExceptionMessage;
 	}
 }
