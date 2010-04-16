@@ -15,15 +15,12 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 
 public class EditProfile extends Activity {
 
 	private Bitmap mImageCache = null;
-	private boolean mIsOpeningNewActivity = false;
-	private boolean mRotateCancelled = false;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -31,12 +28,12 @@ public class EditProfile extends Activity {
 		setContentView(R.layout.edit_profile);
 		
 		final Button choosePictureButton = (Button) findViewById(R.id.edit_profile_chooseButton);
-		final ImageView displayPictureImage = (ImageView) findViewById(R.id.edit_profile_display);
+		/*final ImageView displayPictureImage = (ImageView) findViewById(R.id.edit_profile_display);
 		final EditText firstNameEditText = (EditText) findViewById(R.id.edit_profile_firstName);
 		final EditText lastNameEditText = (EditText) findViewById(R.id.edit_profile_lastName);
 		final EditText shortBioEditText = (EditText) findViewById(R.id.edit_profile_shortBio);
 		final EditText locationEditText = (EditText) findViewById(R.id.edit_profile_location);
-		final Button saveButton = (Button) findViewById(R.id.edit_profile_save);
+		final Button saveButton = (Button) findViewById(R.id.edit_profile_save);*/
 		Log.d("OnCreate", "inside the onCreate~!!");
 		
 		choosePictureButton.setOnClickListener(new View.OnClickListener() {
@@ -44,12 +41,11 @@ public class EditProfile extends Activity {
 			@Override
 			public void onClick(View v) {
 				
-				mIsOpeningNewActivity = true;
 				Log.d("Choose Pict onClick event", "right before opening new activity!!");
 				Intent getImageIntent = new Intent(Intent.ACTION_GET_CONTENT);
 				getImageIntent.setType("image/*");
 				if (mImageCache != null && mImageCache.isRecycled() == false)
-					mImageCache.recycle(); // to prevent the application from out of memory
+					mImageCache.recycle(); // to prevent the application from having out of memory
 				startActivityForResult(getImageIntent, 1543);
 			}
 		});
@@ -108,7 +104,6 @@ public class EditProfile extends Activity {
 					MediaStore.Images.Media.DISPLAY_NAME));
 		}
 		
-		mIsOpeningNewActivity = false;
 	}
 	
 	public String getRealPathFromUri (Uri contentUri, String whatToRetrieve) {

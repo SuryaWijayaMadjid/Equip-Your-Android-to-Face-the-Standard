@@ -1,7 +1,6 @@
 package net.betavinechronicle.client.android;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,8 +34,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 
-
-
 public class UserStream extends ListActivity {
 	static final int RESULTCODE_SUBACTIVITY_CHAINCLOSE = 99;
 	static final int RESULTCODE_SWITCH_ACTIVITY_TO_PROFILE = 98;
@@ -50,13 +47,10 @@ public class UserStream extends ListActivity {
 	
     /** Called when the activity is first created. */
     @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    public void onCreate(Bundle savedInstanceState) {  
+    	super.onCreate(savedInstanceState);
         mPostItems = new ArrayList<PostItem>();
         mPostItemAdapter = new PostItemAdapter(this, R.layout.post_item, mPostItems);
-        
-        /*AtomEntry entry = new DefaultAtomEntry();
-        String a = entry.getTitle();*/
         
         //add a circling progress loading display feature to the top 3right of our application
         this.requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
@@ -67,27 +61,8 @@ public class UserStream extends ListActivity {
         this.registerForContextMenu(getListView());   
         
         this.setListAdapter(mPostItemAdapter);
-        /*viewPostItems = new Runnable() {
-        	
-        	@Override
-        	public void run() {
-        		getPostItems();
-        	}
-        };*/
-        
-/*        File makeDir = new File("/sdcard/Music");
-        try {
-        	makeDir.mkdir();
-        }
-        catch(SecurityException ex) {
-        	Toast.makeText(getApplicationContext(), ex.getMessage(), 1).show();
-        }
-        catch(Exception ex) {
-        	Toast.makeText(getApplicationContext(), ex.getMessage(), 1).show();
-        }*/
-        
-        //new Thread(viewPostItems).start();
-        this.requestFeeds();
+
+        this.requestFeeds(this.getString(R.string.service_endpoint_uri));
         
         mProgressDialog = ProgressDialog.show(this, "Retrieving Stream", "Please wait...");
         
@@ -189,28 +164,66 @@ public class UserStream extends ListActivity {
     }
     
     //requesting feeds to the end-point (refreshing post-items list)
-    private void requestFeeds() {
-    	new HttpTasks(this.getString(R.string.service_endpoint_uri), HttpTasks.HTTP_GET) {
+    private void requestFeeds(String endpointUri) {
+    	new HttpTasks(endpointUri, HttpTasks.HTTP_GET) {
 			
 			@Override
 			public void run() {
 				super.run();
 				
-				if (!this.hasHttpResponse()) {
+				if (this.hasHttpResponse()) {
+					AtomFeed feed = null;
+			        try {
+			        	Log.d("inside try before making xpp", "PHASE-2");
+						XmlPullParserFactory xppFactory = XmlPullParserFactory.newInstance();
+			        	xppFactory.setNamespaceAware(true);
+			        	XmlPullParser xpp = xppFactory.newPullParser();
+			        	xpp.setInput(this.getHttpResponse().getEntity().getContent(), "UTF-8");
+			        	DefaultXppActivityReader xppActivityReader = new DefaultXppActivityReader();
+			        	xpp.next();
+			        	feed = xppActivityReader.parse(xpp);
+			        	Log.d("the end of try", "PHASE-3");
+			        }
+			        catch(XmlPullParserException ex) {
+			        	Log.e("INSIDE requestFeeds()", ex.getMessage());
+			        }
+			        catch(IOException ex) {
+			        	Log.e("INSIDE requestFeeds()", ex.getMessage());
+			        }
+			        catch(Exception ex) {
+			        	Log.e("INSIDE requestFeeds()", ex.getMessage());
+			        }
+			        
+			        Log.d("before feed != null", "PHASE-4");
+			        if (feed != null) {
+			        	mPostItems = new ArrayList<PostItem>();
+			        	List<AtomEntry> atomEntries = feed.getEntries();
+			        	for (AtomEntry atomEntry : atomEntries) {
+			        		if (atomEntry instanceof ActivityEntry) {
+			        			ActivityEntry activityEntry = (ActivityEntry) atomEntry;
+			        			mPostItems.add(new PostItem(
+			        					"["+activityEntry.getVerbs().get(0)+"]" + activityEntry.getTitle(),
+			        					"["+activityEntry.getContent().toString(),
+			        					PostItem.SOURCE_PICASA,
+			        					0));
+			        		}
+			        		else {
+			        			mPostItems.add(new PostItem(
+			        					atomEntry.getTitle(),
+			        					atomEntry.getContent().toString(),
+			        					PostItem.SOURCE_STORYTLR,
+			        					PostItem.TYPE_STATUS));
+			        		}
+			        	}
+			        }
+			        else {
+			        	Log.e("INSIDE requestFeeds()", "Feed is null");
+			        }
+		    		
+		    		runOnUiThread(updateUi);
+				}
+				else
 					Log.e("INSIDE requestFeeds()", this.getExceptionMessage());
-				}
-				
-				InputStream inputStream = null;
-				try {
-					inputStream = this.getHttpResponse().getEntity().getContent();
-				}
-				catch(IOException ex) {
-					Log.e("INSIDE requestFeeds()", this.getExceptionMessage());
-				}
-				catch(IllegalStateException ex) {
-					Log.e("INSIDE requestFeeds()", this.getExceptionMessage());
-				}
-				runOnUiThread(new PostItemMaker(inputStream));
 			};
 			
 		}.start();
@@ -239,73 +252,6 @@ public class UserStream extends ListActivity {
     					"Failed to retrieve post stream..", 
     					Toast.LENGTH_SHORT).show();
     	};
-    };
-    
-
-    private class PostItemMaker implements Runnable {
-    	
-    	private InputStream mInputStream;
-    	
-    	public PostItemMaker(InputStream inputStream) {
-    		super();
-    		mInputStream = inputStream;
-    	}
-    	
-    	@Override
-    	public void run() {
-    		
-    		if (mInputStream != null ) {
-	    		AtomFeed feed = null;
-		        try {
-		        	Log.d("inside try before making xpp", "PHASE-2");
-					XmlPullParserFactory xppFactory = XmlPullParserFactory.newInstance();
-		        	xppFactory.setNamespaceAware(true);
-		        	XmlPullParser xpp = xppFactory.newPullParser();
-		        	xpp.setInput(mInputStream, "UTF-8");
-		        	DefaultXppActivityReader xppActivityReader = new DefaultXppActivityReader();
-		        	xpp.next();
-		        	feed = xppActivityReader.parse(xpp);
-		        	Log.d("the end of try", "PHASE-3");
-		        }
-		        catch(XmlPullParserException ex) {
-		        	Log.e("INSIDE requestFeeds()", ex.getMessage());
-		        }
-		        catch(IOException ex) {
-		        	Log.e("INSIDE requestFeeds()", ex.getMessage());
-		        }
-		        catch(Exception ex) {
-		        	Log.e("INSIDE requestFeeds()", ex.getMessage());
-		        }
-		        
-		        Log.d("before feed != null", "PHASE-4");
-		        if (feed != null) {
-		        	mPostItems = new ArrayList<PostItem>();
-		        	List<AtomEntry> atomEntries = feed.getEntries();
-		        	for (AtomEntry atomEntry : atomEntries) {
-		        		if (atomEntry instanceof ActivityEntry) {
-		        			ActivityEntry activityEntry = (ActivityEntry) atomEntry;
-		        			mPostItems.add(new PostItem(
-		        					"["+activityEntry.getVerbs().get(0)+"]" + activityEntry.getTitle(),
-		        					"["+activityEntry.getContent().toString(),
-		        					0,
-		        					0));
-		        		}
-		        		else {
-		        			mPostItems.add(new PostItem(
-		        					atomEntry.getTitle(),
-		        					atomEntry.getContent().toString(),
-		        					PostItem.SOURCE_STORYTLR,
-		        					PostItem.TYPE_STATUS));
-		        		}
-		        	}
-		        }
-		        else {
-		        	Log.e("INSIDE requestFeeds()", "Feed is null");
-		        }
-    		}
-    		
-    		runOnUiThread(updateUi);
-    	}
     };
     
     //we declare a custom adapter class for our custom list item layout (post_item.xml)
