@@ -2,10 +2,12 @@ package net.betavinechronicle.client.android;
 
 import java.io.IOException;
 
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.FileEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 
@@ -21,7 +23,8 @@ public class HttpTasks extends Thread {
 	private HttpClient mHttpClient;
 	private HttpResponse mHttpResponse;
 	
-	private StringEntity mXmlEntity;	
+	private StringEntity mStringEntity;	
+	private FileEntity mFileEntity;
 	private int mHttpMode;
 	private String mExceptionMessage = "";
 	
@@ -34,10 +37,35 @@ public class HttpTasks extends Thread {
 		else if (httpMode == HttpTasks.HTTP_POST) mHttpPost = new HttpPost(targetUri);		
 	}
 	
-	// Set the entity that we want to send along with the post method
+	// Set a string entity that we want to send along with the post method
 	public void setStringEntity (StringEntity stringEntity, String contentType) {
-		mXmlEntity = stringEntity;
-		mXmlEntity.setContentType(contentType);
+		mStringEntity = stringEntity;
+		mStringEntity.setContentType(contentType);
+	}
+	
+	// Set a file entity that we want to send along with the post method
+	public void setFileEntity(FileEntity fileEntity) {
+		mFileEntity = fileEntity;
+	}
+	
+	public boolean hasStringEntity() {
+		return (mStringEntity != null);
+	}
+	
+	public boolean hasFileEntity() {
+		return (mFileEntity != null);
+	}
+	
+	public boolean hasAvailableEntity() {
+		if (mStringEntity != null) return true;
+		if (mFileEntity != null) return true;
+		return false;
+	}
+	
+	public HttpEntity getAvailableEntity() {
+		if (mStringEntity != null) return mStringEntity;
+		if (mFileEntity != null) return mFileEntity;
+		return null;
 	}
 	
 	@Override
@@ -61,11 +89,12 @@ public class HttpTasks extends Thread {
 			break;
 			
 		case HTTP_POST:
+			HttpEntity httpEntity = this.getAvailableEntity();
 			mHttpPost.addHeader("Accept", "text/atom+xml");
 			mHttpPost.addHeader("Authorization", "Basic authorization");
-			mHttpPost.addHeader("Content-Type", "application/atom+xml");
-			    			
-			mHttpPost.setEntity(mXmlEntity);
+			mHttpPost.addHeader(httpEntity.getContentType());
+			
+			mHttpPost.setEntity(httpEntity);
 	    			
 			try {
 				mHttpResponse = mHttpClient.execute(mHttpPost);

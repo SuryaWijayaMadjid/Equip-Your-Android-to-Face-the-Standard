@@ -101,9 +101,19 @@ public final class R {
         public static final int userstream_options_menu=0x7f050003;
     }
     public static final class string {
-        public static final int app_name=0x7f040001;
-        public static final int debugging_endpoint_uri=0x7f040003;
-        public static final int max_entries=0x7f040000;
-        public static final int service_endpoint_uri=0x7f040002;
+        public static final int app_name=0x7f040000;
+        public static final int debugging_endpoint_uri=0x7f040005;
+        /**  Maximum number of first characters of content to be displayed in brief display 
+         */
+        public static final int max_char_content=0x7f040003;
+        /**  Maximum number of first characters of title to be displayed in brief display 
+         */
+        public static final int max_char_title=0x7f040002;
+        /**  Maximum number of first entries to be shown in the stream 
+         */
+        public static final int max_entries=0x7f040001;
+        /**  The end-point where the request of feeds will be sent to 
+         */
+        public static final int service_endpoint_uri=0x7f040004;
     }
 }

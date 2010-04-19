@@ -18,7 +18,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.os.Bundle;
-import android.os.Debug;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.LayoutInflater;
@@ -197,7 +196,7 @@ public class UserStream extends ListActivity {
 			        	DefaultXppActivityReader xppActivityReader = new DefaultXppActivityReader();
 			        	xpp.next();
 			        	runtime = System.currentTimeMillis();
-			        	feed = xppActivityReader.parse(xpp, 5);
+			        	feed = xppActivityReader.parse(xpp);
 			        	runtime = System.currentTimeMillis() - runtime;
 			        	Log.d("INSIDE requestFeeds()", "Feed-parsing execution time: " + runtime + "ms");
 			        	Log.d("the end of try", "PHASE-3");
@@ -219,21 +218,32 @@ public class UserStream extends ListActivity {
 			        	runtime = System.currentTimeMillis();
 			        	mPostItems = new ArrayList<PostItem>();
 			        	List<AtomEntry> atomEntries = feed.getEntries();
-			        	for (AtomEntry atomEntry : atomEntries) {
+			        	int maxEntries = Integer.parseInt(getString(R.string.max_entries));
+			        	AtomEntry atomEntry = null;
+			        	for (int i=0; i<maxEntries; i++) {
+			        		atomEntry = atomEntries.get(i);
+			        		String entryTitle = atomEntry.getTitle();
+		        			int maxChar = Integer.parseInt(getString(R.string.max_char_title));
+		        			if (entryTitle.length() > maxChar)
+		        				entryTitle = entryTitle.substring(0, maxChar).trim() + "....";
+		        			
+		        			String entryContent = "";
+		        			if (atomEntry.hasContent()) {
+		        				entryContent = atomEntry.getContent().getValue();
+		        				maxChar = Integer.parseInt(getString(R.string.max_char_content));
+			        			if (entryContent.length() > maxChar)
+			        				entryContent = entryContent.substring(0, maxChar).trim() + "....";
+		        			}
+		        			
+		        			mPostItems.add(new PostItem(
+		        					entryTitle,
+		        					entryContent,
+		        					PostItem.SOURCE_PICASA,
+		        					PostItem.TYPE_STATUS));
+		        			
 			        		if (atomEntry instanceof ActivityEntry) {
-			        			ActivityEntry activityEntry = (ActivityEntry) atomEntry;
-			        			mPostItems.add(new PostItem(
-			        					"["+activityEntry.getVerbs().get(0)+"]" + activityEntry.getTitle(),
-			        					"["+activityEntry.getContent().toString(),
-			        					PostItem.SOURCE_PICASA,
-			        					0));
-			        		}
-			        		else {
-			        			mPostItems.add(new PostItem(
-			        					atomEntry.getTitle(),
-			        					atomEntry.getContent().toString(),
-			        					PostItem.SOURCE_STORYTLR,
-			        					PostItem.TYPE_STATUS));
+			        			//ActivityEntry activityEntry = (ActivityEntry) atomEntry;
+			        			// TODO: things that need to be altered if it is an activity entry
 			        		}
 			        	}
 			        	runtime = System.currentTimeMillis() - runtime;
@@ -317,10 +327,10 @@ public class UserStream extends ListActivity {
 				ImageView typeImageView = (ImageView) view.findViewById(R.id.userStream_listItem_typeIcon);
 				
 				if (titleTextView != null) {
-					titleTextView.setText("Title: " + postItem.getTitle());
+					titleTextView.setText(postItem.getTitle());
 				}
 				if (contentTextView != null) {
-					contentTextView.setText("Content: " + postItem.getContent());
+					contentTextView.setText(postItem.getContent());
 				}
 				if (sourceImageView != null) {
 					switch (postItem.getSource()) {
