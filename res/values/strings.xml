@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="hello">Hello World, UserStream!</string>
+    <string name="max_entries">10</string>
     <string name="app_name">Betavine Chronicle Android Client</string>
     <string name="service_endpoint_uri">http://profile.typepad.com/apparentlymart/activity/atom.xml</string>
+	<string name="debugging_endpoint_uri">http://api.twitter.com/1/statuses/user_timeline/the4general.atom</string>
 </resources>

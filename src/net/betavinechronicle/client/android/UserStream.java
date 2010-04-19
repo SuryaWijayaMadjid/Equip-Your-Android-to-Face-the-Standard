@@ -18,6 +18,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.os.Bundle;
+import android.os.Debug;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.LayoutInflater;
@@ -42,6 +43,7 @@ public class UserStream extends ListActivity {
 	private List<PostItem> mPostItems;
 	private PostItemAdapter mPostItemAdapter;
 	private ProgressDialog mProgressDialog = null;
+	private String mProgDialogTitle = "";
 	
 	//private Runnable viewPostItems;
 	
@@ -49,6 +51,7 @@ public class UserStream extends ListActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {  
     	super.onCreate(savedInstanceState);
+    	//Debug.startMethodTracing("tracer");
         mPostItems = new ArrayList<PostItem>();
         mPostItemAdapter = new PostItemAdapter(this, R.layout.post_item, mPostItems);
         
@@ -66,6 +69,12 @@ public class UserStream extends ListActivity {
         
         mProgressDialog = ProgressDialog.show(this, "Retrieving Stream", "Please wait...");
         
+    }
+    
+    @Override
+    protected void onDestroy() {
+    	//Debug.stopMethodTracing();
+    	super.onDestroy();
     }
     
     @Override
@@ -169,19 +178,28 @@ public class UserStream extends ListActivity {
 			
 			@Override
 			public void run() {
+				long runtime = System.currentTimeMillis();
 				super.run();
+				runtime = System.currentTimeMillis() - runtime;
+				Log.d("INSIDE requestFeeds()", "HttpTasks execution time: " + runtime + "ms");
 				
 				if (this.hasHttpResponse()) {
 					AtomFeed feed = null;
 			        try {
+			        	mProgDialogTitle = "Parsing Stream";
+			        	runOnUiThread(changeProgDialogTitle);
 			        	Log.d("inside try before making xpp", "PHASE-2");
+			        	runtime = System.currentTimeMillis();
 						XmlPullParserFactory xppFactory = XmlPullParserFactory.newInstance();
 			        	xppFactory.setNamespaceAware(true);
 			        	XmlPullParser xpp = xppFactory.newPullParser();
 			        	xpp.setInput(this.getHttpResponse().getEntity().getContent(), "UTF-8");
 			        	DefaultXppActivityReader xppActivityReader = new DefaultXppActivityReader();
 			        	xpp.next();
-			        	feed = xppActivityReader.parse(xpp);
+			        	runtime = System.currentTimeMillis();
+			        	feed = xppActivityReader.parse(xpp, 5);
+			        	runtime = System.currentTimeMillis() - runtime;
+			        	Log.d("INSIDE requestFeeds()", "Feed-parsing execution time: " + runtime + "ms");
 			        	Log.d("the end of try", "PHASE-3");
 			        }
 			        catch(XmlPullParserException ex) {
@@ -196,6 +214,9 @@ public class UserStream extends ListActivity {
 			        
 			        Log.d("before feed != null", "PHASE-4");
 			        if (feed != null) {
+			        	mProgDialogTitle = "Displaying Stream";
+			        	runOnUiThread(changeProgDialogTitle);
+			        	runtime = System.currentTimeMillis();
 			        	mPostItems = new ArrayList<PostItem>();
 			        	List<AtomEntry> atomEntries = feed.getEntries();
 			        	for (AtomEntry atomEntry : atomEntries) {
@@ -215,6 +236,8 @@ public class UserStream extends ListActivity {
 			        					PostItem.TYPE_STATUS));
 			        		}
 			        	}
+			        	runtime = System.currentTimeMillis() - runtime;
+			        	Log.d("INSIDE requestFeeds()", "Adding post items execution time: " + runtime + "ms");
 			        }
 			        else {
 			        	Log.e("INSIDE requestFeeds()", "Feed is null");
@@ -229,6 +252,14 @@ public class UserStream extends ListActivity {
 		}.start();
     }
     
+    //change the progress dialog's title
+    private Runnable changeProgDialogTitle = new Runnable() {
+    	@Override
+    	public void run() {
+    		mProgressDialog.setTitle(mProgDialogTitle);
+    	};
+    };
+    
     //update the UI by synchronizing the TabActivity and its adapter
     private Runnable updateUi = new Runnable() {
     	
@@ -236,6 +267,7 @@ public class UserStream extends ListActivity {
     	public void run() {
     		
     		if (mPostItems != null && mPostItems.size() > 0) {
+    			long runtime = System.currentTimeMillis();
 	    		mPostItemAdapter.clear();
 	    		int postItemsSize = mPostItems.size();
 	    	
@@ -245,12 +277,16 @@ public class UserStream extends ListActivity {
 	    		
 	    		mProgressDialog.dismiss();
 	    		mPostItemAdapter.notifyDataSetChanged();
+	    		runtime = System.currentTimeMillis() - runtime;
+	    		Log.d("INSIDE updateUi runnable", "Updating adapter execution time: " + runtime + "ms");
 	    		Log.d("returnResult runnable", "Thread finished");
     		}
-    		else
+    		else {
     			Toast.makeText(getApplicationContext(), 
     					"Failed to retrieve post stream..", 
     					Toast.LENGTH_SHORT).show();
+    			mProgressDialog.dismiss();
+    		}
     	};
     };
     
