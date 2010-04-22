@@ -1,12 +1,18 @@
 package net.betavinechronicle.client.android;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.onesocialweb.model.activity.ActivityEntry;
+import org.onesocialweb.model.activity.ActivityObject;
 import org.onesocialweb.model.atom.AtomEntry;
 import org.onesocialweb.model.atom.AtomFeed;
+import org.onesocialweb.model.atom.AtomLink;
+import org.onesocialweb.model.atom.AtomText;
 import org.onesocialweb.xml.xpp.imp.DefaultXppActivityReader;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -17,6 +23,8 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.ContextMenu;
@@ -29,7 +37,9 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.widget.ArrayAdapter;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.AdapterView.AdapterContextMenuInfo;
@@ -39,10 +49,16 @@ public class UserStream extends ListActivity {
 	static final int RESULTCODE_SWITCH_ACTIVITY_TO_PROFILE = 98;
 	static final int RESULTCODE_SWITCH_ACTIVITY_TO_POST_OR_SHARE = 97;
 	
+	static final int LIST_ITEM_IMAGEVIEW_ID = 9876;
+	
 	private List<PostItem> mPostItems;
 	private PostItemAdapter mPostItemAdapter;
 	private ProgressDialog mProgressDialog = null;
 	private String mProgDialogTitle = "";
+	
+	private int mMaxTitleLength;
+	private int mMaxContentLength;
+	private int mMaxEntriesCount;
 	
 	//private Runnable viewPostItems;
 	
@@ -54,7 +70,12 @@ public class UserStream extends ListActivity {
         mPostItems = new ArrayList<PostItem>();
         mPostItemAdapter = new PostItemAdapter(this, R.layout.post_item, mPostItems);
         
-        //add a circling progress loading display feature to the top 3right of our application
+        // load setup values
+        mMaxEntriesCount = Integer.parseInt(getString(R.string.max_entries));
+        mMaxTitleLength = Integer.parseInt(getString(R.string.max_char_title));
+        mMaxContentLength = Integer.parseInt(getString(R.string.max_char_content));
+        
+        // add a circling progress loading display feature to the top 3right of our application
         this.requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
         
         setContentView(R.layout.main);
@@ -126,6 +147,7 @@ public class UserStream extends ListActivity {
     	case R.id.userStream_context_addComment: 
     		PostItem newPostItem = new PostItem("New Title", 
     				"This is the content... newly add", 
+    				null,
     				PostItem.SOURCE_PICASA, 
     				PostItem.TYPE_STATUS);
     		mPostItems.add(0, newPostItem);
@@ -218,33 +240,44 @@ public class UserStream extends ListActivity {
 			        	runtime = System.currentTimeMillis();
 			        	mPostItems = new ArrayList<PostItem>();
 			        	List<AtomEntry> atomEntries = feed.getEntries();
-			        	int maxEntries = Integer.parseInt(getString(R.string.max_entries));
+			        	int totalEntries = atomEntries.size();
 			        	AtomEntry atomEntry = null;
-			        	for (int i=0; i<maxEntries; i++) {
+			        	for (int i=0; (i<mMaxEntriesCount) && (i<totalEntries); i++) {
 			        		atomEntry = atomEntries.get(i);
-			        		String entryTitle = atomEntry.getTitle();
-		        			int maxChar = Integer.parseInt(getString(R.string.max_char_title));
-		        			if (entryTitle.length() > maxChar)
-		        				entryTitle = entryTitle.substring(0, maxChar).trim() + "....";
-		        			
-		        			String entryContent = "";
-		        			if (atomEntry.hasContent()) {
-		        				entryContent = atomEntry.getContent().getValue();
-		        				maxChar = Integer.parseInt(getString(R.string.max_char_content));
-			        			if (entryContent.length() > maxChar)
-			        				entryContent = entryContent.substring(0, maxChar).trim() + "....";
-		        			}
-		        			
-		        			mPostItems.add(new PostItem(
-		        					entryTitle,
-		        					entryContent,
-		        					PostItem.SOURCE_PICASA,
-		        					PostItem.TYPE_STATUS));
-		        			
-			        		if (atomEntry instanceof ActivityEntry) {
-			        			//ActivityEntry activityEntry = (ActivityEntry) atomEntry;
-			        			// TODO: things that need to be altered if it is an activity entry
+			        		String titleToDisplay = "";
+			        		int sourceToDisplay = i%4;
+			        		int typeToDisplay = i%4;
+			        		// TODO: if there's no title (invalid atom-feed)			        			        		
+			        		
+			        		// the title to be displayed will always be only one
+			        		titleToDisplay = generateTitle(atomEntry);
+			        		
+			        		// TODO: determine the source and type of the post-item
+			        		
+			        		// make the content of the post-item to be displayed
+			        		if (atomEntry instanceof ActivityEntry) { 
+			        			// each object will represent a post-item
+			        			ActivityEntry activityEntry = (ActivityEntry) atomEntry;
+			        			List<ActivityObject> activityObjects = activityEntry.getObjects();
+			        			
+			        			for (ActivityObject activityObject : activityObjects) {
+			        				mPostItems.add(new PostItem(
+					        				titleToDisplay,
+					        				generateContent(activityObject),
+					        				generateImagePreview(activityObject),
+					        				sourceToDisplay,
+					        				typeToDisplay));
+			        			}
 			        		}
+			        		else { // The entry is a regular atom-entry        			
+			        			mPostItems.add(new PostItem(
+				        				titleToDisplay,
+				        				generateContent(atomEntry),
+				        				null,
+				        				sourceToDisplay,
+				        				typeToDisplay));
+			        		} 
+			        		
 			        	}
 			        	runtime = System.currentTimeMillis() - runtime;
 			        	Log.d("INSIDE requestFeeds()", "Adding post items execution time: " + runtime + "ms");
@@ -260,6 +293,135 @@ public class UserStream extends ListActivity {
 			};
 			
 		}.start();
+    }
+
+    private String generateTitle(AtomEntry atomEntry) {
+    	String titleToDisplay = "[no title to display]";
+    	titleToDisplay = atomEntry.getTitle().getValue();
+		if (atomEntry.getTitle().getType().equals("html")) {
+			titleToDisplay = CommonMethods.removeContainedMarkups(titleToDisplay, true);
+		}
+		titleToDisplay = CommonMethods.getShortVersionString(titleToDisplay, mMaxTitleLength);
+    	return titleToDisplay;
+    }
+    
+    private String generateContent(AtomEntry atomEntry) {
+    	String contentToDisplay = null;
+    	if (atomEntry instanceof ActivityObject) {
+    		ActivityObject activityObject = (ActivityObject) atomEntry;
+    		if (activityObject.getType().equals(ActivityObject.ARTICLE)) {
+    			if (activityObject.hasSummary())
+    				contentToDisplay = this.ifHtmlRemoveMarkups(activityObject.getSummary());
+    			else if (activityObject.hasContent())
+    				if (!activityObject.getContent().hasSrc())
+    					contentToDisplay = this.ifHtmlRemoveMarkups(activityObject.getContent());
+    		}
+    		else if (activityObject.getType().equals(ActivityObject.AUDIO)) {
+    			if (activityObject.hasSummary())
+    				contentToDisplay = this.ifHtmlRemoveMarkups(activityObject.getSummary());
+    		}
+    		else if (activityObject.getType().equals(ActivityObject.BOOKMARK)) {
+    			List<AtomLink> links = activityObject.getLinks();
+    			for (AtomLink link : links) {
+    				if (link.hasRel() && link.hasHref()) {
+    					if (link.getRel().equals(AtomLink.REL_RELATED)) {
+    						contentToDisplay = "Link: " + link.getHref();
+    						break;
+    					}
+    				}
+    			}
+    			if (activityObject.hasSummary())
+    				contentToDisplay += "\n" + this.ifHtmlRemoveMarkups(activityObject.getSummary());
+    		}
+    		else if (activityObject.getType().equals(ActivityObject.COMMENT)) {
+    			// TODO: not implemented yet.
+    		}
+    		else if (activityObject.getType().equals(ActivityObject.PHOTO)) {
+    			List<AtomLink> links = activityObject.getLinks();
+    			boolean isPreviewable = false;
+    			for (AtomLink link : links) {
+    				if (link.hasRel()) {
+    					if (link.getRel().equals(AtomLink.REL_PREVIEW)) {
+    						isPreviewable = true;
+    						break;
+    					}
+    				}
+    			}
+    			if (!isPreviewable) 
+    				contentToDisplay = "[Image might be too big to be displayed here]";
+    		}
+    		else if (activityObject.getType().equals(ActivityObject.STATUS)) {
+    			contentToDisplay = this.ifHtmlRemoveMarkups(activityObject.getContent());
+    			contentToDisplay = "\"" + CommonMethods.getShortVersionString(
+    					activityObject.getContent().getValue(), mMaxContentLength - 6) + "\"";
+    		}
+    		else if (activityObject.getType().equals(ActivityObject.VIDEO)) {
+    			if (activityObject.hasSummary())
+    				contentToDisplay = this.ifHtmlRemoveMarkups(activityObject.getSummary());
+    		}
+    		else {
+    			
+    		}
+    	}
+    	else {
+    		contentToDisplay = this.ifHtmlRemoveMarkups(atomEntry.getContent());
+    	}
+
+    	if (contentToDisplay != null)
+    		contentToDisplay = CommonMethods.getShortVersionString(contentToDisplay, mMaxContentLength);
+    	return contentToDisplay;
+    }
+    
+    private String ifHtmlRemoveMarkups(AtomText atomText) {
+    	String text = atomText.getValue();
+    	if (atomText.getType().equals("html"))
+    		text = CommonMethods.removeContainedMarkups(text, true);
+    	return text;
+    }
+    
+    private Bitmap generateImagePreview(ActivityObject object) {
+    	Bitmap imagePreview = null;
+    	if (object.getType().equals(ActivityObject.PHOTO)) {
+    		List<AtomLink> links = object.getLinks();
+			for (AtomLink link : links) {
+				if (link.hasRel() && link.hasHref()) {
+					if (link.getRel().equals(AtomLink.REL_PREVIEW)) {
+						try {
+							InputStream inStream = (InputStream) (new URL(link.getHref())).getContent();
+							imagePreview = BitmapFactory.decodeStream(inStream);
+						}
+						catch (MalformedURLException ex) {
+							Log.e("INSIDE generateImagePreview()", ex.getMessage());
+						}
+						catch (IOException ex) {
+							Log.e("INSIDE generateImagePreview()", ex.getMessage());
+						}
+						catch (Exception ex) {
+							Log.e("INSIDE generateImagePreview()", ex.getMessage());
+						}
+						break;
+					}
+				}
+			}
+    	}
+    	
+    	// for debugging...
+    	/*
+    	try {
+			InputStream inStream = (InputStream) (new URL("http://a1.typepad.com/6a010535617444970b0133ecc20b29970b-120si")).getContent();
+			imagePreview = Drawable.createFromStream(inStream, "linkHref");
+		}
+		catch (MalformedURLException ex) {
+			Log.e("INSIDE generateImagePreview()", ex.getMessage());
+		}
+		catch (IOException ex) {
+			Log.e("INSIDE generateImagePreview()", ex.getMessage());
+		}
+		catch (Exception ex) {
+			Log.e("INSIDE generateImagePreview()", ex.getMessage());
+		}*/
+    	
+    	return imagePreview;
     }
     
     //change the progress dialog's title
@@ -304,10 +466,10 @@ public class UserStream extends ListActivity {
     private class PostItemAdapter extends ArrayAdapter<PostItem> {
     	private List<PostItem> mPostItems;
     	
-		public PostItemAdapter(Context context, int textViewResourceId,	List<PostItem> postItem) {
-			super(context, textViewResourceId, postItem);
+		public PostItemAdapter(Context context, int textViewResourceId,	List<PostItem> postItems) {
+			super(context, textViewResourceId, postItems);
 			
-			mPostItems = postItem;
+			mPostItems = postItems;
 		}
 		
 		@Override
@@ -321,17 +483,51 @@ public class UserStream extends ListActivity {
 			
 			PostItem postItem = mPostItems.get(position);
 			if (postItem != null) {
-				TextView titleTextView = (TextView) view.findViewById(R.id.userStream_listItem_title);
-				TextView contentTextView = (TextView) view.findViewById(R.id.userStream_listItem_content);
-				ImageView sourceImageView = (ImageView) view.findViewById(R.id.userStream_listItem_sourceIcon);
-				ImageView typeImageView = (ImageView) view.findViewById(R.id.userStream_listItem_typeIcon);
+				final FrameLayout contentFrame = (FrameLayout) view.findViewById(R.id.userStream_listItem_frameContent);
+				final TextView titleTextView = (TextView) view.findViewById(R.id.userStream_listItem_title);
+				//TextView contentTextView = (TextView) view.findViewById(R.id.userStream_listItem_content);
+				//ImageView previewImageView = (ImageView) view.findViewById(R.id.userStream_listItem_imagePreview);
+				final ImageView sourceImageView = (ImageView) view.findViewById(R.id.userStream_listItem_sourceIcon);
+				final ImageView typeImageView = (ImageView) view.findViewById(R.id.userStream_listItem_typeIcon);
 				
 				if (titleTextView != null) {
 					titleTextView.setText(postItem.getTitle());
 				}
-				if (contentTextView != null) {
+				if (contentFrame != null) {
+					if (postItem.hasImagePreview()) {
+						final ImageView previewImageView = new ImageView(getApplicationContext());
+						previewImageView.setId(LIST_ITEM_IMAGEVIEW_ID);
+						previewImageView.setAdjustViewBounds(true);
+						previewImageView.setMaxHeight(75);
+						previewImageView.setMaxWidth(75);
+						previewImageView.setImageBitmap(postItem.getImagePreview());
+						final RelativeLayout.LayoutParams layoutParams = 
+							new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, 
+									RelativeLayout.LayoutParams.WRAP_CONTENT);
+						layoutParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
+						layoutParams.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
+						contentFrame.addView(previewImageView, layoutParams);
+					}
+					if (postItem.hasContent()) {
+						final TextView contentTextView = new TextView(getApplicationContext());
+						contentTextView.setText(postItem.getContent());
+						final RelativeLayout.LayoutParams layoutParams = 
+							new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.FILL_PARENT, 
+									RelativeLayout.LayoutParams.WRAP_CONTENT);
+						layoutParams.addRule(RelativeLayout.BELOW, LIST_ITEM_IMAGEVIEW_ID);
+						layoutParams.addRule(RelativeLayout.ALIGN_LEFT, LIST_ITEM_IMAGEVIEW_ID);
+						layoutParams.alignWithParent = true;
+						contentFrame.addView(contentTextView, layoutParams);
+					}
+				}
+				/*if (contentTextView != null) {
 					contentTextView.setText(postItem.getContent());
 				}
+				if (previewImageView != null) {
+					if (postItem.hasImagePreview())
+						previewImageView.setImageDrawable(postItem.getImagePreview());
+				}*/
+				
 				if (sourceImageView != null) {
 					switch (postItem.getSource()) {
 					case PostItem.SOURCE_STORYTLR: sourceImageView.setImageResource(R.drawable.storytlr); break;

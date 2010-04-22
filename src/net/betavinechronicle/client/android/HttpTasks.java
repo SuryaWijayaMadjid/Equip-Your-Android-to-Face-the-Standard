@@ -12,7 +12,6 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 
 
-
 public class HttpTasks extends Thread {
 
 	static final int HTTP_GET = 1;

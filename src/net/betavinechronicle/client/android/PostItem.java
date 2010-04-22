@@ -1,5 +1,7 @@
 package net.betavinechronicle.client.android;
 
+import android.graphics.Bitmap;
+
 public class PostItem {
 
 	static final int SOURCE_STORYTLR = 1;
@@ -16,21 +18,33 @@ public class PostItem {
 	
 	private String mTitle;
 	private String mContent;
+	private Bitmap mImagePreview;
 	private int mSource;
 	private int mType;
 	
 	public PostItem() {
-		mTitle = "";
-		mContent = "";
 		mSource = 0;
 		mType = 0;
 	}
 	
-	public PostItem(String title, String content, int source, int type) {
+	public PostItem(String title, String content, Bitmap imagePreview, int source, int type) {
 		mTitle = title;
 		mContent = content;
+		mImagePreview = imagePreview;
 		mSource = source;
 		mType = type;
+	}
+	
+	public boolean hasImagePreview() {
+		return (mImagePreview != null);
+	}
+	
+	public boolean hasTitle() {
+		return (mTitle != null);
+	}
+	
+	public boolean hasContent() {
+		return (mContent != null);
 	}
 	
 	public void setTitle(String title) {
@@ -55,6 +69,10 @@ public class PostItem {
 	
 	public String getContent() {
 		return mContent;
+	}
+	
+	public Bitmap getImagePreview() {
+		return mImagePreview;
 	}
 	
 	public int getSource() {

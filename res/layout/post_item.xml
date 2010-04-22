@@ -30,7 +30,16 @@
 		android:paddingBottom="3dip"
 		android:textStyle="bold"
 		/>
-	<TextView android:id="@+id/userStream_listItem_content"
+	<FrameLayout android:id="@+id/userStream_listItem_frameContent"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:layout_toRightOf="@id/userStream_listItem_typeIcon"
+		android:layout_below="@id/userStream_listItem_title"
+		android:layout_weight="1"
+		android:paddingLeft="10dip"
+		>
+	</FrameLayout>
+	<!--TextView android:id="@+id/userStream_listItem_content"
 		android:layout_width="fill_parent"
 		android:layout_height="wrap_content"
 		android:layout_toRightOf="@id/userStream_listItem_typeIcon"
@@ -38,5 +47,16 @@
 		android:layout_weight="1"
 		android:paddingLeft="10dip"
 		/>
+	<ImageView android:id="@+id/userStream_listItem_imagePreview"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:maxWidth="75dip"
+		android:maxHeight="75dip"
+		android:layout_toRightOf="@id/userStream_listItem_typeIcon"
+		android:layout_below="@id/userStream_listItem_content"
+		android:layout_alignWithParentIfMissing="true"
+		android:scaleType="centerInside"
+		android:paddingLeft="10dip"
+		/-->
 		
 </RelativeLayout>

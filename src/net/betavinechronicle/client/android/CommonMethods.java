@@ -1,5 +1,7 @@
 package net.betavinechronicle.client.android;
 
+import org.apache.commons.lang.StringEscapeUtils;
+
 public class CommonMethods {
 
 	public static int recommendedSampleSize(int viewWidth, int viewHeight, int imageWidth, int imageHeight) {
@@ -31,5 +33,34 @@ public class CommonMethods {
 			else return resultNumber/powerBy;
 		}
 		else return 1;
+	}
+	
+	public static String removeContainedMarkups (String inputString, boolean unescapeHtmlFirst) {
+		
+		if (unescapeHtmlFirst) 
+			inputString = StringEscapeUtils.unescapeHtml(inputString);
+		
+		boolean mOpeningDetected = false;
+		int mOpeningAt = -1;
+		
+		for (int i = 0; i < inputString.length(); i++) {
+			if (inputString.charAt(i) == '<') {
+				mOpeningDetected = true;
+				mOpeningAt = i;
+			}
+			else if (inputString.charAt(i) == '>' && mOpeningDetected == true) {
+				inputString = inputString.substring(0, mOpeningAt) + inputString.substring(i+1);
+				mOpeningDetected = false;
+				i -= (i - mOpeningAt + 1);
+			}
+		}
+		
+		return inputString;
+	}
+	
+	public static String getShortVersionString (String string, int maxLength) {
+		if (string.length() > maxLength)
+			string = string.substring(0, maxLength).trim() + "....";
+		return string;
 	}
 }

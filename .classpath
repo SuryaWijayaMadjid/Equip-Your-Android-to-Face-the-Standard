@@ -4,5 +4,6 @@
 	<classpathentry kind="src" path="gen"/>
 	<classpathentry kind="con" path="com.android.ide.eclipse.adt.ANDROID_FRAMEWORK"/>
 	<classpathentry kind="lib" path="lib/forked-osw-model.jar"/>
+	<classpathentry kind="lib" path="/opt/eclipse/plugins/org.apache.commons.lang_2.3.0.v200803061910.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
