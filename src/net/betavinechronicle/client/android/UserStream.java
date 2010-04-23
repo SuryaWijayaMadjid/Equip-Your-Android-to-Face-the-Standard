@@ -49,7 +49,8 @@ public class UserStream extends ListActivity {
 	static final int RESULTCODE_SWITCH_ACTIVITY_TO_PROFILE = 98;
 	static final int RESULTCODE_SWITCH_ACTIVITY_TO_POST_OR_SHARE = 97;
 	
-	static final int LIST_ITEM_IMAGEVIEW_ID = 9876;
+	static final int LIST_ITEM_PREVIEW_IMAGE_ID = 9876;
+	static final int LIST_ITEM_CONTENT_TEXT_ID = 9877;
 	
 	private List<PostItem> mPostItems;
 	private PostItemAdapter mPostItemAdapter;
@@ -258,13 +259,13 @@ public class UserStream extends ListActivity {
 			        		if (atomEntry instanceof ActivityEntry) { 
 			        			// each object will represent a post-item
 			        			ActivityEntry activityEntry = (ActivityEntry) atomEntry;
-			        			List<ActivityObject> activityObjects = activityEntry.getObjects();
+			        			List<ActivityObject> objects = activityEntry.getObjects();
 			        			
-			        			for (ActivityObject activityObject : activityObjects) {
+			        			for (ActivityObject object : objects) {
 			        				mPostItems.add(new PostItem(
 					        				titleToDisplay,
-					        				generateContent(activityObject),
-					        				generateImagePreview(activityObject),
+					        				generateContent(object),
+					        				generateImagePreview(object),
 					        				sourceToDisplay,
 					        				typeToDisplay));
 			        			}
@@ -296,12 +297,36 @@ public class UserStream extends ListActivity {
     }
 
     private String generateTitle(AtomEntry atomEntry) {
-    	String titleToDisplay = "[no title to display]";
-    	titleToDisplay = atomEntry.getTitle().getValue();
-		if (atomEntry.getTitle().getType().equals("html")) {
-			titleToDisplay = CommonMethods.removeContainedMarkups(titleToDisplay, true);
-		}
-		titleToDisplay = CommonMethods.getShortVersionString(titleToDisplay, mMaxTitleLength);
+    	String titleToDisplay = null;
+    	/*
+    	// generating the title based on the verb and object
+    	if (atomEntry instanceof ActivityEntry) {
+    		ActivityEntry activityEntry = (ActivityEntry) atomEntry;
+    		List<ActivityVerb> verbs = activityEntry.getVerbs();
+    		for (ActivityVerb verb : verbs) {
+    			String verbValue = verb.getValue();
+    			if (verbValue.equals(ActivityVerb.POST)) {
+    				
+    				break;
+    			}
+    			else if (verbValue.equals(ActivityVerb.SAVE)) {
+    				//titleToDisplay = 
+    				break;
+    			}
+    			else if (verbValue.equals(ActivityVerb.SHARE)) {
+    				
+    				break;
+    			}
+    		}
+    		if (titleToDisplay == null) { // there is no known activity:verb
+    			titleToDisplay = this.ifHtmlRemoveMarkups(atomEntry.getTitle());
+    		}
+    	}
+    	else {
+    		titleToDisplay = this.ifHtmlRemoveMarkups(atomEntry.getTitle());
+    	}*/
+    	
+    	titleToDisplay = CommonMethods.getShortVersionString(titleToDisplay, mMaxTitleLength);
     	return titleToDisplay;
     }
     
@@ -309,18 +334,19 @@ public class UserStream extends ListActivity {
     	String contentToDisplay = null;
     	if (atomEntry instanceof ActivityObject) {
     		ActivityObject activityObject = (ActivityObject) atomEntry;
-    		if (activityObject.getType().equals(ActivityObject.ARTICLE)) {
+    		String objectType = activityObject.getType();
+    		if (objectType.equals(ActivityObject.ARTICLE)) {
     			if (activityObject.hasSummary())
     				contentToDisplay = this.ifHtmlRemoveMarkups(activityObject.getSummary());
     			else if (activityObject.hasContent())
     				if (!activityObject.getContent().hasSrc())
     					contentToDisplay = this.ifHtmlRemoveMarkups(activityObject.getContent());
     		}
-    		else if (activityObject.getType().equals(ActivityObject.AUDIO)) {
+    		else if (objectType.equals(ActivityObject.AUDIO)) {
     			if (activityObject.hasSummary())
     				contentToDisplay = this.ifHtmlRemoveMarkups(activityObject.getSummary());
     		}
-    		else if (activityObject.getType().equals(ActivityObject.BOOKMARK)) {
+    		else if (objectType.equals(ActivityObject.BOOKMARK)) {
     			List<AtomLink> links = activityObject.getLinks();
     			for (AtomLink link : links) {
     				if (link.hasRel() && link.hasHref()) {
@@ -333,38 +359,43 @@ public class UserStream extends ListActivity {
     			if (activityObject.hasSummary())
     				contentToDisplay += "\n" + this.ifHtmlRemoveMarkups(activityObject.getSummary());
     		}
-    		else if (activityObject.getType().equals(ActivityObject.COMMENT)) {
+    		else if (objectType.equals(ActivityObject.COMMENT)) {
     			// TODO: not implemented yet.
     		}
-    		else if (activityObject.getType().equals(ActivityObject.PHOTO)) {
+    		else if (objectType.equals(ActivityObject.PHOTO)) {
     			List<AtomLink> links = activityObject.getLinks();
     			boolean isPreviewable = false;
     			for (AtomLink link : links) {
-    				if (link.hasRel()) {
+    				if (link.hasRel() && link.hasHref()) {
     					if (link.getRel().equals(AtomLink.REL_PREVIEW)) {
     						isPreviewable = true;
     						break;
     					}
+    					contentToDisplay = this.ifHtmlRemoveMarkups(activityObject.getTitle());
     				}
     			}
     			if (!isPreviewable) 
-    				contentToDisplay = "[Image might be too big to be displayed here]";
+    				contentToDisplay  += " [no preview due to the big size]";
     		}
-    		else if (activityObject.getType().equals(ActivityObject.STATUS)) {
+    		else if (objectType.equals(ActivityObject.STATUS)) {
     			contentToDisplay = this.ifHtmlRemoveMarkups(activityObject.getContent());
     			contentToDisplay = "\"" + CommonMethods.getShortVersionString(
     					activityObject.getContent().getValue(), mMaxContentLength - 6) + "\"";
     		}
-    		else if (activityObject.getType().equals(ActivityObject.VIDEO)) {
+    		else if (objectType.equals(ActivityObject.VIDEO)) {
     			if (activityObject.hasSummary())
     				contentToDisplay = this.ifHtmlRemoveMarkups(activityObject.getSummary());
     		}
-    		else {
-    			
+    		else { // unknown object-type of activity:object
+    			if (activityObject.hasContent())
+    				if (!activityObject.getContent().hasSrc())
+    					contentToDisplay = this.ifHtmlRemoveMarkups(activityObject.getContent());
     		}
     	}
     	else {
-    		contentToDisplay = this.ifHtmlRemoveMarkups(atomEntry.getContent());
+    		if (atomEntry.hasContent())
+				if (!atomEntry.getContent().hasSrc())
+					contentToDisplay = this.ifHtmlRemoveMarkups(atomEntry.getContent());
     	}
 
     	if (contentToDisplay != null)
@@ -485,8 +516,6 @@ public class UserStream extends ListActivity {
 			if (postItem != null) {
 				final FrameLayout contentFrame = (FrameLayout) view.findViewById(R.id.userStream_listItem_frameContent);
 				final TextView titleTextView = (TextView) view.findViewById(R.id.userStream_listItem_title);
-				//TextView contentTextView = (TextView) view.findViewById(R.id.userStream_listItem_content);
-				//ImageView previewImageView = (ImageView) view.findViewById(R.id.userStream_listItem_imagePreview);
 				final ImageView sourceImageView = (ImageView) view.findViewById(R.id.userStream_listItem_sourceIcon);
 				final ImageView typeImageView = (ImageView) view.findViewById(R.id.userStream_listItem_typeIcon);
 				
@@ -494,45 +523,61 @@ public class UserStream extends ListActivity {
 					titleTextView.setText(postItem.getTitle());
 				}
 				if (contentFrame != null) {
+					ImageView previewImageView = (ImageView) view.findViewById(LIST_ITEM_PREVIEW_IMAGE_ID);
+					TextView contentTextView = (TextView) view.findViewById(LIST_ITEM_CONTENT_TEXT_ID);
 					if (postItem.hasImagePreview()) {
-						final ImageView previewImageView = new ImageView(getApplicationContext());
-						previewImageView.setId(LIST_ITEM_IMAGEVIEW_ID);
-						previewImageView.setAdjustViewBounds(true);
-						previewImageView.setMaxHeight(75);
-						previewImageView.setMaxWidth(75);
-						previewImageView.setImageBitmap(postItem.getImagePreview());
-						final RelativeLayout.LayoutParams layoutParams = 
-							new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, 
-									RelativeLayout.LayoutParams.WRAP_CONTENT);
-						layoutParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
-						layoutParams.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
-						contentFrame.addView(previewImageView, layoutParams);
+						if (previewImageView == null) {
+							previewImageView = new ImageView(getApplicationContext());
+							previewImageView.setId(LIST_ITEM_PREVIEW_IMAGE_ID);
+							previewImageView.setAdjustViewBounds(true);
+							previewImageView.setMaxHeight(75);
+							previewImageView.setMaxWidth(75);
+							previewImageView.setImageBitmap(postItem.getImagePreview());
+							final RelativeLayout.LayoutParams layoutParams = 
+								new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, 
+										RelativeLayout.LayoutParams.WRAP_CONTENT);
+							layoutParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
+							layoutParams.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
+							contentFrame.addView(previewImageView, layoutParams);
+						}
+						else {
+							previewImageView.setImageBitmap(postItem.getImagePreview());
+						}
 					}
+					else { // check whether there is a reusable view, if so remove it from contentFrame
+						if (previewImageView != null)
+							contentFrame.removeView(previewImageView);
+					}
+					
 					if (postItem.hasContent()) {
-						final TextView contentTextView = new TextView(getApplicationContext());
-						contentTextView.setText(postItem.getContent());
-						final RelativeLayout.LayoutParams layoutParams = 
-							new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.FILL_PARENT, 
-									RelativeLayout.LayoutParams.WRAP_CONTENT);
-						layoutParams.addRule(RelativeLayout.BELOW, LIST_ITEM_IMAGEVIEW_ID);
-						layoutParams.addRule(RelativeLayout.ALIGN_LEFT, LIST_ITEM_IMAGEVIEW_ID);
-						layoutParams.alignWithParent = true;
-						contentFrame.addView(contentTextView, layoutParams);
+						if (contentTextView == null) {
+							contentTextView = new TextView(getApplicationContext());
+							contentTextView.setId(LIST_ITEM_CONTENT_TEXT_ID);
+							contentTextView.setText(postItem.getContent());
+							final RelativeLayout.LayoutParams layoutParams = 
+								new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.FILL_PARENT, 
+										RelativeLayout.LayoutParams.WRAP_CONTENT);
+							layoutParams.addRule(RelativeLayout.BELOW, LIST_ITEM_PREVIEW_IMAGE_ID);
+							layoutParams.addRule(RelativeLayout.ALIGN_LEFT, LIST_ITEM_PREVIEW_IMAGE_ID);
+							layoutParams.alignWithParent = true;
+							contentFrame.addView(contentTextView, layoutParams);
+						}
+						else {
+							contentTextView.setText(postItem.getContent());
+						}
+					}
+					else { // check whether there is a reusable view, if so remove it from contentFrame
+						if (contentTextView != null)
+							contentFrame.removeView(contentTextView);
 					}
 				}
-				/*if (contentTextView != null) {
-					contentTextView.setText(postItem.getContent());
-				}
-				if (previewImageView != null) {
-					if (postItem.hasImagePreview())
-						previewImageView.setImageDrawable(postItem.getImagePreview());
-				}*/
 				
 				if (sourceImageView != null) {
 					switch (postItem.getSource()) {
 					case PostItem.SOURCE_STORYTLR: sourceImageView.setImageResource(R.drawable.storytlr); break;
 					case PostItem.SOURCE_TWITTER: sourceImageView.setImageResource(R.drawable.twitter); break;
 					case PostItem.SOURCE_PICASA: sourceImageView.setImageResource(R.drawable.picasa); break;
+					default: sourceImageView.setImageBitmap(null);
 					}					
 				}
 				if (typeImageView != null) {
@@ -543,6 +588,7 @@ public class UserStream extends ListActivity {
 					case PostItem.TYPE_PICTURE: break;
 					case PostItem.TYPE_AUDIO: break;
 					case PostItem.TYPE_VIDEO: break;
+					default: typeImageView.setImageBitmap(null);
 					}
 				}
 			}

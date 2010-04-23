@@ -59,6 +59,8 @@ public class CommonMethods {
 	}
 	
 	public static String getShortVersionString (String string, int maxLength) {
+		if (string == null) 
+			return null;
 		if (string.length() > maxLength)
 			string = string.substring(0, maxLength).trim() + "....";
 		return string;
