@@ -70,12 +70,12 @@ public class EditProfile extends Activity {
     		return true;
     	
     	case R.id.profile_options_postOrShare: 
-    		this.setResult(UserStream.RESULTCODE_SWITCH_ACTIVITY_TO_POST_OR_SHARE);
+    		this.setResult(Porter.RESULTCODE_SWITCH_ACTIVITY_TO_POST_OR_SHARE);
     		this.finish();
     		return true;
     	
     	case R.id.profile_options_exit: 
-    		this.setResult(UserStream.RESULTCODE_SUBACTIVITY_CHAINCLOSE);
+    		this.setResult(Porter.RESULTCODE_SUBACTIVITY_CHAINCLOSE);
     		this.finish();
     		return true;
     	}

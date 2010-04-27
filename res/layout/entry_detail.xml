@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		>
+
+	<RelativeLayout
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:padding="10dip"
+		>
+		
+		<ImageView android:id="@+id/entry_detail_typeIcon"
+			android:layout_width="40dip"
+			android:layout_height="25dip"
+			android:layout_alignParentLeft="true"
+			android:layout_alignParentTop="true"
+			android:scaleType="centerInside"
+			android:src="@drawable/icon"
+			/>
+		<ImageView android:id="@+id/entry_detail_sourceIcon"
+			android:layout_width="40dip"
+			android:layout_height="25dip"
+			android:layout_toRightOf="@id/entry_detail_typeIcon"
+			android:layout_alignParentTop="true"
+			android:layout_alignWithParentIfMissing="true"
+			android:scaleType="centerInside"
+			android:src="@drawable/picasa"
+			/>
+		<TextView android:id="@+id/entry_detail_title"
+			android:layout_width="fill_parent"
+			android:layout_height="wrap_content"
+			android:layout_below="@id/entry_detail_typeIcon"
+			android:layout_alignParentLeft="true"
+			android:layout_alignWithParentIfMissing="true"
+			android:paddingTop="5dip"
+			android:textStyle="bold"
+			android:text="This is the title of the entry"
+			/>
+		<TextView android:id="@+id/entry_detail_published"
+			android:layout_width="fill_parent"
+			android:layout_height="wrap_content"
+			android:layout_below="@id/entry_detail_title"
+			android:layout_alignParentLeft="true"
+			android:layout_alignWithParentIfMissing="true"
+			android:paddingBottom="10dip"
+			android:textStyle="italic"
+			android:text="updated - exact date and time"
+			/>
+	    <TextView android:id="@+id/entry_detail_textPreview"
+	    	android:layout_width="fill_parent"
+	    	android:layout_height="wrap_content"
+	    	android:layout_below="@id/entry_detail_published"
+	    	android:layout_alignParentLeft="true"
+	    	android:layout_alignWithParentIfMissing="true"
+	    	android:visibility="gone"
+	    	/>    
+		<WebView android:id="@+id/entry_detail_webPreview"
+	    	android:layout_width="fill_parent"
+	    	android:layout_height="wrap_content"
+	    	android:layout_below="@id/entry_detail_textPreview"
+	    	android:layout_alignParentLeft="true"
+	    	android:layout_alignWithParentIfMissing="true"
+	    	android:visibility="gone"
+	    	/>  
+	    <Button android:id="@+id/entry_detail_editPost"
+	    	android:layout_width="wrap_content"
+	    	android:layout_height="wrap_content"
+	    	android:layout_below="@id/entry_detail_webPreview"
+	    	android:layout_centerHorizontal="true"
+	    	android:layout_alignWithParentIfMissing="true"
+	    	android:text="Edit Post"
+	    	/>
+	    <Button android:id="@+id/entry_detail_addComment"
+	    	android:layout_width="wrap_content"
+	    	android:layout_height="wrap_content"
+	    	android:layout_toLeftOf="@id/entry_detail_editPost"
+	    	android:layout_alignTop="@id/entry_detail_editPost"
+	    	android:layout_alignWithParentIfMissing="true"
+	    	android:text="Add Comment"
+	    	/>
+	    <Button android:id="@+id/entry_detail_deletePost"
+	    	android:layout_width="wrap_content"
+	    	android:layout_height="wrap_content"
+	    	android:layout_toRightOf="@id/entry_detail_editPost"
+	    	android:layout_alignTop="@id/entry_detail_editPost"
+	    	android:layout_alignWithParentIfMissing="true"
+	    	android:text="Delete Post"
+	    	/>
+		
+	</RelativeLayout>
+	
+</ScrollView>

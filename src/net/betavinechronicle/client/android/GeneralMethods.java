@@ -1,8 +1,9 @@
 package net.betavinechronicle.client.android;
 
 import org.apache.commons.lang.StringEscapeUtils;
+import org.onesocialweb.model.atom.AtomText;
 
-public class CommonMethods {
+public class GeneralMethods {
 
 	public static int recommendedSampleSize(int viewWidth, int viewHeight, int imageWidth, int imageHeight) {
 		int widthRatio = imageWidth / viewWidth;
@@ -65,4 +66,12 @@ public class CommonMethods {
 			string = string.substring(0, maxLength).trim() + "....";
 		return string;
 	}
+	
+    
+    public static String ifHtmlRemoveMarkups(AtomText atomText) {
+    	String text = atomText.getValue();
+    	if (atomText.getType().equals("html"))
+    		text = GeneralMethods.removeContainedMarkups(text, true);
+    	return text;
+    }
 }

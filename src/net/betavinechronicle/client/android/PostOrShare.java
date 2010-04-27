@@ -84,12 +84,12 @@ public class PostOrShare extends TabActivity {
     		return true;
     	
     	case R.id.postOrShare_options_profile: 
-    		this.setResult(UserStream.RESULTCODE_SWITCH_ACTIVITY_TO_PROFILE);
+    		this.setResult(Porter.RESULTCODE_SWITCH_ACTIVITY_TO_PROFILE);
     		this.finish();
     		return true;
     	
     	case R.id.postOrShare_options_exit: 
-    		this.setResult(UserStream.RESULTCODE_SUBACTIVITY_CHAINCLOSE);
+    		this.setResult(Porter.RESULTCODE_SUBACTIVITY_CHAINCLOSE);
     		this.finish();
     		return true;
     	}

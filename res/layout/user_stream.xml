@@ -6,14 +6,27 @@
     android:padding="5dip"
     >
     
-    <ListView android:id="@android:id/list"
+    <FrameLayout android:id="@+id/userStream_main_author_frame"
     	android:layout_width="fill_parent"
-    	android:layout_height="fill_parent"
-    	/>
+    	android:layout_height="wrap_content"
+    	>
+    	
+    	<ImageView android:id="@+id/userStream_main_author_photo"
+    		android:layout_width="wrap_content"
+    		android:layout_height="wrap_content"
+    		android:maxWidth="50dip"
+    		android:maxHeight="50dip"
+    		/>
+    	
+    </FrameLayout>
 	<TextView android:id="@android:id/empty"
 	    android:layout_width="fill_parent" 
 	    android:layout_height="wrap_content" 
 	    android:text="There is still no posts yet."
 	    />
+    <ListView android:id="@android:id/list"
+    	android:layout_width="fill_parent"
+    	android:layout_height="fill_parent"
+    	/>
 	    
 </LinearLayout>

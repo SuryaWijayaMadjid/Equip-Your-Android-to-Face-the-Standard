@@ -30,7 +30,7 @@
 		android:paddingBottom="3dip"
 		android:textStyle="bold"
 		/>
-	<FrameLayout android:id="@+id/userStream_listItem_frameContent"
+	<RelativeLayout android:id="@+id/userStream_listItem_blockContent"
 		android:layout_width="fill_parent"
 		android:layout_height="wrap_content"
 		android:layout_toRightOf="@id/userStream_listItem_typeIcon"
@@ -38,7 +38,7 @@
 		android:layout_weight="1"
 		android:paddingLeft="10dip"
 		>
-	</FrameLayout>
+	</RelativeLayout>
 	<!--TextView android:id="@+id/userStream_listItem_content"
 		android:layout_width="fill_parent"
 		android:layout_height="wrap_content"

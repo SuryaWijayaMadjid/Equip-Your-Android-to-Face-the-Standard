@@ -12,7 +12,6 @@ import org.onesocialweb.model.activity.ActivityObject;
 import org.onesocialweb.model.atom.AtomEntry;
 import org.onesocialweb.model.atom.AtomFeed;
 import org.onesocialweb.model.atom.AtomLink;
-import org.onesocialweb.model.atom.AtomText;
 import org.onesocialweb.xml.xpp.imp.DefaultXppActivityReader;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -36,18 +35,17 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.ContextMenu.ContextMenuInfo;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.ListView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.AdapterView.AdapterContextMenuInfo;
+import android.widget.AdapterView.OnItemClickListener;
 
 public class UserStream extends ListActivity {
-	static final int RESULTCODE_SUBACTIVITY_CHAINCLOSE = 99;
-	static final int RESULTCODE_SWITCH_ACTIVITY_TO_PROFILE = 98;
-	static final int RESULTCODE_SWITCH_ACTIVITY_TO_POST_OR_SHARE = 97;
 	
 	static final int LIST_ITEM_PREVIEW_IMAGE_ID = 9876;
 	static final int LIST_ITEM_CONTENT_TEXT_ID = 9877;
@@ -55,6 +53,8 @@ public class UserStream extends ListActivity {
 	private List<PostItem> mPostItems;
 	private PostItemAdapter mPostItemAdapter;
 	private ProgressDialog mProgressDialog = null;
+	private Porter mPorter;
+	
 	private String mProgDialogTitle = "";
 	
 	private int mMaxTitleLength;
@@ -68,7 +68,9 @@ public class UserStream extends ListActivity {
     public void onCreate(Bundle savedInstanceState) {  
     	super.onCreate(savedInstanceState);
     	//Debug.startMethodTracing("tracer");
-        mPostItems = new ArrayList<PostItem>();
+    	
+        mPorter = (Porter) this.getApplication();
+    	mPostItems = new ArrayList<PostItem>();
         mPostItemAdapter = new PostItemAdapter(this, R.layout.post_item, mPostItems);
         
         // load setup values
@@ -79,17 +81,39 @@ public class UserStream extends ListActivity {
         // add a circling progress loading display feature to the top 3right of our application
         this.requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
         
-        setContentView(R.layout.main);
+        setContentView(R.layout.user_stream);
+        
         this.setProgressBarIndeterminateVisibility(false); 
         
         this.registerForContextMenu(getListView());   
         
         this.setListAdapter(mPostItemAdapter);
+        
+        ListView postsList = this.getListView();
+        postsList.setTextFilterEnabled(true);
+        postsList.setOnItemClickListener(new OnItemClickListener() {
 
-        this.requestFeeds(this.getString(R.string.service_endpoint_uri));
+			@Override
+			public void onItemClick(AdapterView<?> parent, View view, int position,
+					long id) {
+				Intent intent = new Intent(getApplicationContext(), 
+						net.betavinechronicle.client.android.EntryDetail.class);
+				intent.putExtra(Porter.EXTRAKEY_REQUESTCODE, Porter.REQUESTCODE_VIEW_ENTRY);
+				intent.putExtra(Porter.EXTRAKEY_TARGET_POSTITEM_INDEX, position);
+				startActivityForResult(intent, Porter.REQUESTCODE_VIEW_ENTRY);
+			}
+		});
+
+        this.requestFeeds(this.getString(R.string.debugging_endpoint_uri3));
         
         mProgressDialog = ProgressDialog.show(this, "Retrieving Stream", "Please wait...");
         
+    }
+    
+    @Override
+    protected void onResume() {
+    	// TODO: if a set of interval has been reached, refresh the feed
+    	super.onResume();
     }
     
     @Override
@@ -113,13 +137,15 @@ public class UserStream extends ListActivity {
     	switch (item.getItemId()) {
     	case R.id.userStream_options_postOrShare: 
     		intent = new Intent(this, net.betavinechronicle.client.android.PostOrShare.class);
-			this.startActivityForResult(intent,1);
+    		intent.putExtra(Porter.EXTRAKEY_REQUESTCODE, Porter.REQUESTCODE_POST_OR_SHARE);
+			this.startActivityForResult(intent, Porter.REQUESTCODE_POST_OR_SHARE);
     		return true;
     		
     	case R.id.userStream_options_setFilter: return true;
     	case R.id.userStream_options_profile: 
     		intent = new Intent(this, net.betavinechronicle.client.android.EditProfile.class);
-			this.startActivityForResult(intent,1);
+    		intent.putExtra(Porter.EXTRAKEY_REQUESTCODE, Porter.REQUESTCODE_EDIT_PROFILE);
+    		this.startActivityForResult(intent, Porter.REQUESTCODE_EDIT_PROFILE);
     		return true;
     	
     	case R.id.userStream_options_exit: 
@@ -150,7 +176,9 @@ public class UserStream extends ListActivity {
     				"This is the content... newly add", 
     				null,
     				PostItem.SOURCE_PICASA, 
-    				PostItem.TYPE_STATUS);
+    				PostItem.TYPE_STATUS,
+    				0,
+    				0);
     		mPostItems.add(0, newPostItem);
     		mPostItemAdapter.insert(newPostItem, 0);
     		mPostItemAdapter.notifyDataSetChanged();
@@ -173,16 +201,16 @@ public class UserStream extends ListActivity {
     	Intent intent = null;
     	
     	switch (resultCode) {
-    	case RESULTCODE_SUBACTIVITY_CHAINCLOSE:
+    	case Porter.RESULTCODE_SUBACTIVITY_CHAINCLOSE:
     		finish();
     		break;
     	
-    	case RESULTCODE_SWITCH_ACTIVITY_TO_POST_OR_SHARE:
+    	case Porter.RESULTCODE_SWITCH_ACTIVITY_TO_POST_OR_SHARE:
     		intent = new Intent(this, net.betavinechronicle.client.android.PostOrShare.class);
 			this.startActivityForResult(intent,1);
 			break;
 			
-    	case RESULTCODE_SWITCH_ACTIVITY_TO_PROFILE:
+    	case Porter.RESULTCODE_SWITCH_ACTIVITY_TO_PROFILE:
     		intent = new Intent(this, net.betavinechronicle.client.android.EditProfile.class);
 			this.startActivityForResult(intent,1);
 			break;
@@ -207,8 +235,8 @@ public class UserStream extends ListActivity {
 				
 				if (this.hasHttpResponse()) {
 					AtomFeed feed = null;
-			        try {
-			        	mProgDialogTitle = "Parsing Stream";
+		        	try {
+						mProgDialogTitle = "Parsing Stream";
 			        	runOnUiThread(changeProgDialogTitle);
 			        	Log.d("inside try before making xpp", "PHASE-2");
 			        	runtime = System.currentTimeMillis();
@@ -236,9 +264,11 @@ public class UserStream extends ListActivity {
 			        
 			        Log.d("before feed != null", "PHASE-4");
 			        if (feed != null) {
+			        	mPorter.setFeed(feed);
 			        	mProgDialogTitle = "Displaying Stream";
 			        	runOnUiThread(changeProgDialogTitle);
 			        	runtime = System.currentTimeMillis();
+			        	//displayUserProfile(feed.getAuthors().get(0));
 			        	mPostItems = new ArrayList<PostItem>();
 			        	List<AtomEntry> atomEntries = feed.getEntries();
 			        	int totalEntries = atomEntries.size();
@@ -260,14 +290,17 @@ public class UserStream extends ListActivity {
 			        			// each object will represent a post-item
 			        			ActivityEntry activityEntry = (ActivityEntry) atomEntry;
 			        			List<ActivityObject> objects = activityEntry.getObjects();
-			        			
+			        			int objectCount = 0;
 			        			for (ActivityObject object : objects) {
 			        				mPostItems.add(new PostItem(
 					        				titleToDisplay,
 					        				generateContent(object),
 					        				generateImagePreview(object),
 					        				sourceToDisplay,
-					        				typeToDisplay));
+					        				typeToDisplay,
+					        				i,
+					        				objectCount));
+			        				objectCount++;
 			        			}
 			        		}
 			        		else { // The entry is a regular atom-entry        			
@@ -276,10 +309,13 @@ public class UserStream extends ListActivity {
 				        				generateContent(atomEntry),
 				        				null,
 				        				sourceToDisplay,
-				        				typeToDisplay));
+				        				typeToDisplay,
+				        				i,
+				        				0));
 			        		} 
 			        		
 			        	}
+			        	mPorter.setPostItems(mPostItems);
 			        	runtime = System.currentTimeMillis() - runtime;
 			        	Log.d("INSIDE requestFeeds()", "Adding post items execution time: " + runtime + "ms");
 			        }
@@ -295,6 +331,14 @@ public class UserStream extends ListActivity {
 			
 		}.start();
     }
+    
+    /*private void displayUserProfile(AtomPerson atomAuthor) {
+    	final FrameLayout authorFrame = (FrameLayout) findViewById(R.id.userStream_main_author_frame);
+    	authorFrame.setVisibility(View.VISIBLE);
+    	final ImageView authorPhoto = (ImageView) findViewById(R.id.userStream_main_author_photo);
+    	String photoUrl = "http://picasaweb.google.com/lh/photo/vzyeSjb3NLlOxvVBlljD4g?feat=directlink";
+    	authorPhoto.setImageBitmap(this.getImageBitmapFromUrlString(photoUrl));
+    }*/
 
     private String generateTitle(AtomEntry atomEntry) {
     	String titleToDisplay = null;
@@ -325,8 +369,8 @@ public class UserStream extends ListActivity {
     	else {
     		titleToDisplay = this.ifHtmlRemoveMarkups(atomEntry.getTitle());
     	}*/
-    	
-    	titleToDisplay = CommonMethods.getShortVersionString(titleToDisplay, mMaxTitleLength);
+    	titleToDisplay = GeneralMethods.ifHtmlRemoveMarkups(atomEntry.getTitle());
+    	titleToDisplay = GeneralMethods.getShortVersionString(titleToDisplay, mMaxTitleLength);
     	return titleToDisplay;
     }
     
@@ -337,14 +381,14 @@ public class UserStream extends ListActivity {
     		String objectType = activityObject.getType();
     		if (objectType.equals(ActivityObject.ARTICLE)) {
     			if (activityObject.hasSummary())
-    				contentToDisplay = this.ifHtmlRemoveMarkups(activityObject.getSummary());
+    				contentToDisplay = GeneralMethods.ifHtmlRemoveMarkups(activityObject.getSummary());
     			else if (activityObject.hasContent())
     				if (!activityObject.getContent().hasSrc())
-    					contentToDisplay = this.ifHtmlRemoveMarkups(activityObject.getContent());
+    					contentToDisplay = GeneralMethods.ifHtmlRemoveMarkups(activityObject.getContent());
     		}
     		else if (objectType.equals(ActivityObject.AUDIO)) {
     			if (activityObject.hasSummary())
-    				contentToDisplay = this.ifHtmlRemoveMarkups(activityObject.getSummary());
+    				contentToDisplay = GeneralMethods.ifHtmlRemoveMarkups(activityObject.getSummary());
     		}
     		else if (objectType.equals(ActivityObject.BOOKMARK)) {
     			List<AtomLink> links = activityObject.getLinks();
@@ -357,7 +401,7 @@ public class UserStream extends ListActivity {
     				}
     			}
     			if (activityObject.hasSummary())
-    				contentToDisplay += "\n" + this.ifHtmlRemoveMarkups(activityObject.getSummary());
+    				contentToDisplay += "\n" + GeneralMethods.ifHtmlRemoveMarkups(activityObject.getSummary());
     		}
     		else if (objectType.equals(ActivityObject.COMMENT)) {
     			// TODO: not implemented yet.
@@ -371,43 +415,36 @@ public class UserStream extends ListActivity {
     						isPreviewable = true;
     						break;
     					}
-    					contentToDisplay = this.ifHtmlRemoveMarkups(activityObject.getTitle());
+    					contentToDisplay = GeneralMethods.ifHtmlRemoveMarkups(activityObject.getTitle());
     				}
     			}
     			if (!isPreviewable) 
     				contentToDisplay  += " [no preview due to the big size]";
     		}
     		else if (objectType.equals(ActivityObject.STATUS)) {
-    			contentToDisplay = this.ifHtmlRemoveMarkups(activityObject.getContent());
-    			contentToDisplay = "\"" + CommonMethods.getShortVersionString(
+    			contentToDisplay = GeneralMethods.ifHtmlRemoveMarkups(activityObject.getContent());
+    			contentToDisplay = "\"" + GeneralMethods.getShortVersionString(
     					activityObject.getContent().getValue(), mMaxContentLength - 6) + "\"";
     		}
     		else if (objectType.equals(ActivityObject.VIDEO)) {
     			if (activityObject.hasSummary())
-    				contentToDisplay = this.ifHtmlRemoveMarkups(activityObject.getSummary());
+    				contentToDisplay = GeneralMethods.ifHtmlRemoveMarkups(activityObject.getSummary());
     		}
     		else { // unknown object-type of activity:object
     			if (activityObject.hasContent())
     				if (!activityObject.getContent().hasSrc())
-    					contentToDisplay = this.ifHtmlRemoveMarkups(activityObject.getContent());
+    					contentToDisplay = GeneralMethods.ifHtmlRemoveMarkups(activityObject.getContent());
     		}
     	}
     	else {
     		if (atomEntry.hasContent())
 				if (!atomEntry.getContent().hasSrc())
-					contentToDisplay = this.ifHtmlRemoveMarkups(atomEntry.getContent());
+					contentToDisplay = GeneralMethods.ifHtmlRemoveMarkups(atomEntry.getContent());
     	}
 
     	if (contentToDisplay != null)
-    		contentToDisplay = CommonMethods.getShortVersionString(contentToDisplay, mMaxContentLength);
+    		contentToDisplay = GeneralMethods.getShortVersionString(contentToDisplay, mMaxContentLength);
     	return contentToDisplay;
-    }
-    
-    private String ifHtmlRemoveMarkups(AtomText atomText) {
-    	String text = atomText.getValue();
-    	if (atomText.getType().equals("html"))
-    		text = CommonMethods.removeContainedMarkups(text, true);
-    	return text;
     }
     
     private Bitmap generateImagePreview(ActivityObject object) {
@@ -417,30 +454,21 @@ public class UserStream extends ListActivity {
 			for (AtomLink link : links) {
 				if (link.hasRel() && link.hasHref()) {
 					if (link.getRel().equals(AtomLink.REL_PREVIEW)) {
-						try {
-							InputStream inStream = (InputStream) (new URL(link.getHref())).getContent();
-							imagePreview = BitmapFactory.decodeStream(inStream);
-						}
-						catch (MalformedURLException ex) {
-							Log.e("INSIDE generateImagePreview()", ex.getMessage());
-						}
-						catch (IOException ex) {
-							Log.e("INSIDE generateImagePreview()", ex.getMessage());
-						}
-						catch (Exception ex) {
-							Log.e("INSIDE generateImagePreview()", ex.getMessage());
-						}
+						imagePreview = this.getImageBitmapFromUrlString(link.getHref());
 						break;
 					}
 				}
 			}
     	}
     	
-    	// for debugging...
-    	/*
+    	return imagePreview;
+    }
+    
+    private Bitmap getImageBitmapFromUrlString(String url) {
+    	Bitmap bitmapImage = null;
     	try {
-			InputStream inStream = (InputStream) (new URL("http://a1.typepad.com/6a010535617444970b0133ecc20b29970b-120si")).getContent();
-			imagePreview = Drawable.createFromStream(inStream, "linkHref");
+			InputStream inStream = (InputStream) (new URL(url)).getContent();
+			bitmapImage = BitmapFactory.decodeStream(inStream);
 		}
 		catch (MalformedURLException ex) {
 			Log.e("INSIDE generateImagePreview()", ex.getMessage());
@@ -450,9 +478,8 @@ public class UserStream extends ListActivity {
 		}
 		catch (Exception ex) {
 			Log.e("INSIDE generateImagePreview()", ex.getMessage());
-		}*/
-    	
-    	return imagePreview;
+		}
+    	return bitmapImage;
     }
     
     //change the progress dialog's title
@@ -514,7 +541,7 @@ public class UserStream extends ListActivity {
 			
 			PostItem postItem = mPostItems.get(position);
 			if (postItem != null) {
-				final FrameLayout contentFrame = (FrameLayout) view.findViewById(R.id.userStream_listItem_frameContent);
+				final RelativeLayout contentBlock = (RelativeLayout) view.findViewById(R.id.userStream_listItem_blockContent);
 				final TextView titleTextView = (TextView) view.findViewById(R.id.userStream_listItem_title);
 				final ImageView sourceImageView = (ImageView) view.findViewById(R.id.userStream_listItem_sourceIcon);
 				final ImageView typeImageView = (ImageView) view.findViewById(R.id.userStream_listItem_typeIcon);
@@ -522,7 +549,7 @@ public class UserStream extends ListActivity {
 				if (titleTextView != null) {
 					titleTextView.setText(postItem.getTitle());
 				}
-				if (contentFrame != null) {
+				if (contentBlock != null) {
 					ImageView previewImageView = (ImageView) view.findViewById(LIST_ITEM_PREVIEW_IMAGE_ID);
 					TextView contentTextView = (TextView) view.findViewById(LIST_ITEM_CONTENT_TEXT_ID);
 					if (postItem.hasImagePreview()) {
@@ -538,7 +565,7 @@ public class UserStream extends ListActivity {
 										RelativeLayout.LayoutParams.WRAP_CONTENT);
 							layoutParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
 							layoutParams.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
-							contentFrame.addView(previewImageView, layoutParams);
+							contentBlock.addView(previewImageView, layoutParams);
 						}
 						else {
 							previewImageView.setImageBitmap(postItem.getImagePreview());
@@ -546,7 +573,7 @@ public class UserStream extends ListActivity {
 					}
 					else { // check whether there is a reusable view, if so remove it from contentFrame
 						if (previewImageView != null)
-							contentFrame.removeView(previewImageView);
+							contentBlock.removeView(previewImageView);
 					}
 					
 					if (postItem.hasContent()) {
@@ -560,7 +587,7 @@ public class UserStream extends ListActivity {
 							layoutParams.addRule(RelativeLayout.BELOW, LIST_ITEM_PREVIEW_IMAGE_ID);
 							layoutParams.addRule(RelativeLayout.ALIGN_LEFT, LIST_ITEM_PREVIEW_IMAGE_ID);
 							layoutParams.alignWithParent = true;
-							contentFrame.addView(contentTextView, layoutParams);
+							contentBlock.addView(contentTextView, layoutParams);
 						}
 						else {
 							contentTextView.setText(postItem.getContent());
@@ -568,28 +595,23 @@ public class UserStream extends ListActivity {
 					}
 					else { // check whether there is a reusable view, if so remove it from contentFrame
 						if (contentTextView != null)
-							contentFrame.removeView(contentTextView);
+							contentBlock.removeView(contentTextView);
 					}
 				}
 				
 				if (sourceImageView != null) {
-					switch (postItem.getSource()) {
-					case PostItem.SOURCE_STORYTLR: sourceImageView.setImageResource(R.drawable.storytlr); break;
-					case PostItem.SOURCE_TWITTER: sourceImageView.setImageResource(R.drawable.twitter); break;
-					case PostItem.SOURCE_PICASA: sourceImageView.setImageResource(R.drawable.picasa); break;
-					default: sourceImageView.setImageBitmap(null);
-					}					
+					int resId = postItem.getSourceIconResId();
+					if (resId == -1)
+						sourceImageView.setImageBitmap(null);
+					else
+						sourceImageView.setImageResource(resId);				
 				}
 				if (typeImageView != null) {
-					switch (postItem.getSource()) {
-					case PostItem.TYPE_STATUS: break;
-					case PostItem.TYPE_BLOG: break;
-					case PostItem.TYPE_LINK: break;
-					case PostItem.TYPE_PICTURE: break;
-					case PostItem.TYPE_AUDIO: break;
-					case PostItem.TYPE_VIDEO: break;
-					default: typeImageView.setImageBitmap(null);
-					}
+					int resId = postItem.getTypeIconResId();
+					if (resId == -1)
+						typeImageView.setImageBitmap(null);
+					else
+						typeImageView.setImageResource(resId);
 				}
 			}
 			

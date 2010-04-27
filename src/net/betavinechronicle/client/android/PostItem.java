@@ -21,18 +21,25 @@ public class PostItem {
 	private Bitmap mImagePreview;
 	private int mSource;
 	private int mType;
+	private int mEntryIndex;
+	private int mObjectIndex;
 	
 	public PostItem() {
 		mSource = 0;
 		mType = 0;
+		mEntryIndex = -1;
+		mObjectIndex = -1;
 	}
 	
-	public PostItem(String title, String content, Bitmap imagePreview, int source, int type) {
+	public PostItem(String title, String content, Bitmap imagePreview, int source, 
+			int type, int entryIndex, int objectIndex) {
 		mTitle = title;
 		mContent = content;
 		mImagePreview = imagePreview;
 		mSource = source;
 		mType = type;
+		mEntryIndex = entryIndex;
+		mObjectIndex = objectIndex;
 	}
 	
 	public boolean hasImagePreview() {
@@ -45,6 +52,14 @@ public class PostItem {
 	
 	public boolean hasContent() {
 		return (mContent != null);
+	}
+	
+	public boolean hasEntryIndex() {
+		return (mEntryIndex > -1);
+	}
+	
+	public boolean hasObjectIndex() {
+		return (mObjectIndex > -1);
 	}
 	
 	public void setTitle(String title) {
@@ -61,6 +76,14 @@ public class PostItem {
 	
 	public void setType(int type) {
 		mType = type;
+	}
+	
+	public void setEntryIndex(int entryIndex) {
+		mEntryIndex = entryIndex;
+	}
+	
+	public void setObjectIndex(int objectIndex) {
+		mObjectIndex = objectIndex;
 	}
 	
 	public String getTitle() {
@@ -81,5 +104,34 @@ public class PostItem {
 	
 	public int getType() {
 		return mType;
+	}
+	
+	public int getEntryIndex() {
+		return mEntryIndex;
+	}
+	
+	public int getObjectIndex() {
+		return mObjectIndex;
+	}
+	
+	public int getSourceIconResId() {
+		switch (mSource) {
+		case PostItem.SOURCE_STORYTLR: return R.drawable.storytlr;
+		case PostItem.SOURCE_TWITTER: return R.drawable.twitter;
+		case PostItem.SOURCE_PICASA: return R.drawable.picasa;
+		default: return -1;
+		}
+	}
+	
+	public int getTypeIconResId() {
+		switch (mType) {
+		case PostItem.TYPE_STATUS: return -1;
+		case PostItem.TYPE_BLOG: return -1;
+		case PostItem.TYPE_LINK: return -1;
+		case PostItem.TYPE_PICTURE: return -1;
+		case PostItem.TYPE_AUDIO: return -1;
+		case PostItem.TYPE_VIDEO: return -1;
+		default: return -1;
+		}
 	}
 }
