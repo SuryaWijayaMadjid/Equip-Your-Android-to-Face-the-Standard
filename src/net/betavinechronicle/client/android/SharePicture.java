@@ -1,5 +1,16 @@
 package net.betavinechronicle.client.android;
 
+import java.util.List;
+
+import org.apache.commons.lang.StringEscapeUtils;
+import org.onesocialweb.model.activity.ActivityEntry;
+import org.onesocialweb.model.activity.ActivityObject;
+import org.onesocialweb.model.atom.AtomFactory;
+import org.onesocialweb.model.atom.AtomFeed;
+import org.onesocialweb.model.atom.AtomLink;
+import org.onesocialweb.model.atom.AtomText;
+import org.onesocialweb.model.atom.DefaultAtomFactory;
+
 import android.app.Activity;
 import android.content.Intent;
 import android.database.Cursor;
@@ -19,17 +30,24 @@ import android.widget.TextView;
 public class SharePicture extends Activity {
 
 	private Bitmap mImageCache = null;
+	private Porter mPorter;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.share_picture_tabwidget);
+		mPorter = (Porter) this.getApplication();
 
 		final RadioButton byUploadRadio = (RadioButton) findViewById (R.id.postOrShare_picture_byUpload);
 		final RadioButton byUrlRadio = (RadioButton) findViewById (R.id.postOrShare_picture_byUrl);
 		final FrameLayout uploadFrame = (FrameLayout) findViewById (R.id.postOrShare_picture_uploadFrame);
 		final EditText urlEditText = (EditText) findViewById (R.id.postOrShare_picture_url);
 		final Button choosePictureButton = (Button) findViewById (R.id.postOrShare_picture_chooseButton);
+		
+		final EditText titleEditText = (EditText) findViewById(R.id.postOrShare_picture_title);
+		final ImageView displayPictureImage = (ImageView) findViewById(R.id.postOrShare_picture_display);
+		final EditText noteEditText = (EditText) findViewById(R.id.postOrShare_picture_note);
+		final Button postButton = (Button) findViewById(R.id.postOrShare_picture_postButton);
 		
 		byUrlRadio.setOnClickListener(new View.OnClickListener() {
 			
@@ -63,6 +81,64 @@ public class SharePicture extends Activity {
 				startActivityForResult(getImageIntent, 1543);
 			}
 		});
+		
+		if (this.getIntent().getIntExtra(Porter.EXTRAKEY_REQUESTCODE, 0)
+				== Porter.REQUESTCODE_EDIT_ENTRY) {
+			postButton.setText("Confirm Edit");
+			this.setTitle("Edit Link - Betavine Chronicle Client");
+			
+			final int targetIndex = this.getIntent().getIntExtra(
+					Porter.EXTRAKEY_TARGET_POSTITEM_INDEX, -1);
+			if (mPorter.hasFeed() && mPorter.hasPostItems() && (targetIndex > -1)) {
+				final AtomFeed feed = mPorter.getFeed();
+				final List<PostItem> postItems = mPorter.getPostItems();
+				final PostItem postItem = postItems.get(targetIndex);
+				final ActivityEntry entry = (ActivityEntry) feed.getEntries().get(postItem.getEntryIndex());
+								
+				final ActivityObject object = entry.getObjects().get(postItem.getObjectIndex());
+				final AtomText title = object.getTitle();
+				titleEditText.setText(StringEscapeUtils.unescapeHtml(
+						GeneralMethods.ifHtmlRemoveMarkups(title)));
+				List<AtomLink> links = object.getLinks();
+				for (AtomLink loopLink : links) {
+					if (loopLink.hasRel() && loopLink.hasHref())
+						if (loopLink.getRel().equals(AtomLink.REL_PREVIEW)) {
+							displayPictureImage.setImageBitmap(
+									GeneralMethods.getImageBitmapFromUrlString(loopLink.getHref()));
+							break;
+						}
+				}
+				if (object.hasSummary()) {
+					final AtomText summary = object.getSummary();
+					noteEditText.setText(StringEscapeUtils.unescapeHtml(
+							GeneralMethods.ifHtmlRemoveMarkups(summary)));
+				}
+			
+				postButton.setOnClickListener(new View.OnClickListener() {
+					
+					@Override
+					public void onClick(View v) {
+						// TODO: send edit resource request
+						String newTitle = titleEditText.getText().toString();
+						String newNote = noteEditText.getText().toString();
+						title.setType("text");
+						title.setValue(newTitle);
+						if (!object.hasSummary()) {
+							AtomFactory atomFactory = new DefaultAtomFactory();
+							AtomText summary = atomFactory.text();							
+							summary.setType("text");
+							summary.setValue(newNote);
+							object.setSummary(summary);
+						}
+							
+						Intent data = new Intent();
+						data.putExtra(Porter.EXTRAKEY_TARGET_POSTITEM_INDEX, targetIndex);
+						setResult(Porter.RESULTCODE_ENTRY_EDITED, data);
+						finish();
+					}
+				});			
+			}
+		}
 	}
 	
 	@Override

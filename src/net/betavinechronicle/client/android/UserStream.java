@@ -1,9 +1,6 @@
 package net.betavinechronicle.client.android;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,7 +20,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.ContextMenu;
@@ -104,10 +100,8 @@ public class UserStream extends ListActivity {
 			}
 		});
 
-        this.requestFeeds(this.getString(R.string.debugging_endpoint_uri3));
-        
-        mProgressDialog = ProgressDialog.show(this, "Retrieving Stream", "Please wait...");
-        
+        this.promptForUsername();
+        //this.requestFeeds(this.getString(R.string.service_endpoint_uri));
     }
     
     @Override
@@ -198,6 +192,14 @@ public class UserStream extends ListActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
     	super.onActivityResult(requestCode, resultCode, data);
+    	if (requestCode == Porter.REQUESTCODE_PROMPT_USERNAME && resultCode == RESULT_OK) {
+    		String username = data.getCharSequenceExtra("username").toString();
+    		this.requestFeeds(this.getString(R.string.service_endpoint_uri)); 
+            mProgressDialog = ProgressDialog.show(this, "Retrieving Stream of " + username, 
+            		"Please wait...");
+    		return;
+    	}
+    	
     	Intent intent = null;
     	
     	switch (resultCode) {
@@ -214,12 +216,38 @@ public class UserStream extends ListActivity {
     		intent = new Intent(this, net.betavinechronicle.client.android.EditProfile.class);
 			this.startActivityForResult(intent,1);
 			break;
+    	
+    	case Porter.RESULTCODE_ENTRY_EDITED:
+    		int targetIndex = data.getIntExtra(Porter.EXTRAKEY_TARGET_POSTITEM_INDEX, -1);
+    		PostItem postItem = mPostItems.get(targetIndex);
+    		AtomEntry atomEntry = mPorter.getFeed().getEntries().get(postItem.getEntryIndex());
+    		if (atomEntry instanceof ActivityEntry) {
+    			postItem.setContent(this.generateContent(
+    					((ActivityEntry) atomEntry).getObjects().get(postItem.getObjectIndex()))
+    					);
+    		}
+    		else {
+    			postItem.setContent(this.generateContent(atomEntry));
+    		}
+    		this.mPostItemAdapter.notifyDataSetChanged();
+    		this.setSelection(targetIndex);
+    		break;
+    		
+    	case Porter.RESULTCODE_ENTRY_DELETED:
+    		
+    		break;
     	}
     }
     
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
     	super.onConfigurationChanged(newConfig);
+    }
+    
+    private void promptForUsername() {
+    	Intent intent = new Intent(getApplicationContext(), 
+				net.betavinechronicle.client.android.EnterUsername.class);
+    	startActivityForResult(intent, Porter.REQUESTCODE_PROMPT_USERNAME);
     }
     
     //requesting feeds to the end-point (refreshing post-items list)
@@ -277,13 +305,13 @@ public class UserStream extends ListActivity {
 			        		atomEntry = atomEntries.get(i);
 			        		String titleToDisplay = "";
 			        		int sourceToDisplay = i%4;
-			        		int typeToDisplay = i%4;
+			        		int typeToDisplay = 0;
 			        		// TODO: if there's no title (invalid atom-feed)			        			        		
 			        		
 			        		// the title to be displayed will always be only one
 			        		titleToDisplay = generateTitle(atomEntry);
 			        		
-			        		// TODO: determine the source and type of the post-item
+			        		// TODO: determine the source of the post-item
 			        		
 			        		// make the content of the post-item to be displayed
 			        		if (atomEntry instanceof ActivityEntry) { 
@@ -292,6 +320,7 @@ public class UserStream extends ListActivity {
 			        			List<ActivityObject> objects = activityEntry.getObjects();
 			        			int objectCount = 0;
 			        			for (ActivityObject object : objects) {
+			        				typeToDisplay = PostItem.getTypeByObjectType(object.getType());
 			        				mPostItems.add(new PostItem(
 					        				titleToDisplay,
 					        				generateContent(object),
@@ -311,7 +340,7 @@ public class UserStream extends ListActivity {
 				        				sourceToDisplay,
 				        				typeToDisplay,
 				        				i,
-				        				0));
+				        				-1));
 			        		} 
 			        		
 			        	}
@@ -415,11 +444,12 @@ public class UserStream extends ListActivity {
     						isPreviewable = true;
     						break;
     					}
-    					contentToDisplay = GeneralMethods.ifHtmlRemoveMarkups(activityObject.getTitle());
     				}
     			}
-    			if (!isPreviewable) 
-    				contentToDisplay  += " [no preview due to the big size]";
+    			if (isPreviewable)
+					contentToDisplay = GeneralMethods.ifHtmlRemoveMarkups(activityObject.getTitle());
+    			else
+    				contentToDisplay  = "\n[no preview due to the big size]";
     		}
     		else if (objectType.equals(ActivityObject.STATUS)) {
     			contentToDisplay = GeneralMethods.ifHtmlRemoveMarkups(activityObject.getContent());
@@ -430,7 +460,7 @@ public class UserStream extends ListActivity {
     			if (activityObject.hasSummary())
     				contentToDisplay = GeneralMethods.ifHtmlRemoveMarkups(activityObject.getSummary());
     		}
-    		else { // unknown object-type of activity:object
+    		else { // unrecognized object-type of activity:object
     			if (activityObject.hasContent())
     				if (!activityObject.getContent().hasSrc())
     					contentToDisplay = GeneralMethods.ifHtmlRemoveMarkups(activityObject.getContent());
@@ -454,7 +484,7 @@ public class UserStream extends ListActivity {
 			for (AtomLink link : links) {
 				if (link.hasRel() && link.hasHref()) {
 					if (link.getRel().equals(AtomLink.REL_PREVIEW)) {
-						imagePreview = this.getImageBitmapFromUrlString(link.getHref());
+						imagePreview = GeneralMethods.getImageBitmapFromUrlString(link.getHref());
 						break;
 					}
 				}
@@ -462,24 +492,6 @@ public class UserStream extends ListActivity {
     	}
     	
     	return imagePreview;
-    }
-    
-    private Bitmap getImageBitmapFromUrlString(String url) {
-    	Bitmap bitmapImage = null;
-    	try {
-			InputStream inStream = (InputStream) (new URL(url)).getContent();
-			bitmapImage = BitmapFactory.decodeStream(inStream);
-		}
-		catch (MalformedURLException ex) {
-			Log.e("INSIDE generateImagePreview()", ex.getMessage());
-		}
-		catch (IOException ex) {
-			Log.e("INSIDE generateImagePreview()", ex.getMessage());
-		}
-		catch (Exception ex) {
-			Log.e("INSIDE generateImagePreview()", ex.getMessage());
-		}
-    	return bitmapImage;
     }
     
     //change the progress dialog's title

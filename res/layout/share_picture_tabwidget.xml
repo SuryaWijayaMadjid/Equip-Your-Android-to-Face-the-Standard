@@ -17,7 +17,7 @@
 			android:text="Title:"
 			android:textStyle="bold"
 			/>
-		<EditText android:id="@+id/postOrShare_link_title"
+		<EditText android:id="@+id/postOrShare_picture_title"
 			android:layout_width="fill_parent"
 			android:layout_height="wrap_content"
 			/>

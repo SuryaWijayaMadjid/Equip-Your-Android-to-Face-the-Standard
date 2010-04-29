@@ -19,6 +19,7 @@ public class Porter extends Application {
 	static final int REQUESTCODE_DELETE_ENTRY = 77;
 	static final int REQUESTCODE_POST_OR_SHARE = 76;
 	static final int REQUESTCODE_EDIT_PROFILE = 75;
+	static final int REQUESTCODE_PROMPT_USERNAME = 74;
 	
 	static final String EXTRAKEY_REQUESTCODE = "request-code";
 	static final String EXTRAKEY_TARGET_POSTITEM_INDEX = "alter-postitem-index";

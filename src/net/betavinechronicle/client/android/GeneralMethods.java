@@ -1,7 +1,16 @@
 package net.betavinechronicle.client.android;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
+
 import org.apache.commons.lang.StringEscapeUtils;
 import org.onesocialweb.model.atom.AtomText;
+
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.util.Log;
 
 public class GeneralMethods {
 
@@ -73,5 +82,23 @@ public class GeneralMethods {
     	if (atomText.getType().equals("html"))
     		text = GeneralMethods.removeContainedMarkups(text, true);
     	return text;
+    }
+        
+    public static Bitmap getImageBitmapFromUrlString(String url) {
+    	Bitmap bitmapImage = null;
+    	try {
+			InputStream inStream = (InputStream) (new URL(url)).getContent();
+			bitmapImage = BitmapFactory.decodeStream(inStream);
+		}
+		catch (MalformedURLException ex) {
+			Log.e("INSIDE generateImagePreview()", ex.getMessage());
+		}
+		catch (IOException ex) {
+			Log.e("INSIDE generateImagePreview()", ex.getMessage());
+		}
+		catch (Exception ex) {
+			Log.e("INSIDE generateImagePreview()", ex.getMessage());
+		}
+    	return bitmapImage;
     }
 }

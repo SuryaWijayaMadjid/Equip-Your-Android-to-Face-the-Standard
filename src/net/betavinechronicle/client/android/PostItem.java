@@ -1,5 +1,7 @@
 package net.betavinechronicle.client.android;
 
+import org.onesocialweb.model.activity.ActivityObject;
+
 import android.graphics.Bitmap;
 
 public class PostItem {
@@ -106,6 +108,19 @@ public class PostItem {
 		return mType;
 	}
 	
+
+	public static int getTypeByObjectType(String objectType) {
+		if (objectType.equals(ActivityObject.STATUS)) return TYPE_STATUS;
+		else if (objectType.equals(ActivityObject.ARTICLE)) return TYPE_BLOG;
+		else if (objectType.equals(ActivityObject.BOOKMARK)) return TYPE_LINK;
+		else if (objectType.equals(ActivityObject.PHOTO)) return TYPE_PICTURE;
+		else if (objectType.equals(ActivityObject.AUDIO)) return TYPE_AUDIO;
+		else if (objectType.equals(ActivityObject.VIDEO)) return TYPE_VIDEO;
+		
+		return 0;
+	}
+	
+	
 	public int getEntryIndex() {
 		return mEntryIndex;
 	}
@@ -133,5 +148,10 @@ public class PostItem {
 		case PostItem.TYPE_VIDEO: return -1;
 		default: return -1;
 		}
+	}
+	
+	public boolean isTypeRecognized() {
+		return (mType==TYPE_AUDIO || mType==TYPE_BLOG || mType==TYPE_LINK
+				|| mType==TYPE_PICTURE || mType==TYPE_STATUS || mType==TYPE_VIDEO);
 	}
 }

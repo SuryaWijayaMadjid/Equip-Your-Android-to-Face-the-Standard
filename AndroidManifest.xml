@@ -16,6 +16,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".EnterUsername"
+                  android:label="Login Page - Betavine Chronicle Client">
+        </activity>
         <activity android:name=".EntryDetail"
                   android:label="Entry Detail - Betavine Chronicle Client">
         </activity>

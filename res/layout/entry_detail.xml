@@ -37,7 +37,7 @@
 			android:textStyle="bold"
 			android:text="This is the title of the entry"
 			/>
-		<TextView android:id="@+id/entry_detail_published"
+		<TextView android:id="@+id/entry_detail_updated"
 			android:layout_width="fill_parent"
 			android:layout_height="wrap_content"
 			android:layout_below="@id/entry_detail_title"
@@ -47,26 +47,20 @@
 			android:textStyle="italic"
 			android:text="updated - exact date and time"
 			/>
-	    <TextView android:id="@+id/entry_detail_textPreview"
-	    	android:layout_width="fill_parent"
+		<LinearLayout android:id="@+id/entry_detail_preview_block"
+			android:orientation="vertical"
+			android:layout_width="fill_parent"
 	    	android:layout_height="wrap_content"
-	    	android:layout_below="@id/entry_detail_published"
+	    	android:layout_below="@id/entry_detail_updated"
 	    	android:layout_alignParentLeft="true"
 	    	android:layout_alignWithParentIfMissing="true"
-	    	android:visibility="gone"
-	    	/>    
-		<WebView android:id="@+id/entry_detail_webPreview"
-	    	android:layout_width="fill_parent"
-	    	android:layout_height="wrap_content"
-	    	android:layout_below="@id/entry_detail_textPreview"
-	    	android:layout_alignParentLeft="true"
-	    	android:layout_alignWithParentIfMissing="true"
-	    	android:visibility="gone"
-	    	/>  
+	    	android:paddingBottom="10dip"
+			>
+		</LinearLayout>
 	    <Button android:id="@+id/entry_detail_editPost"
 	    	android:layout_width="wrap_content"
 	    	android:layout_height="wrap_content"
-	    	android:layout_below="@id/entry_detail_webPreview"
+	    	android:layout_below="@id/entry_detail_preview_block"
 	    	android:layout_centerHorizontal="true"
 	    	android:layout_alignWithParentIfMissing="true"
 	    	android:text="Edit Post"
