@@ -8,7 +8,6 @@ import org.onesocialweb.model.activity.ActivityEntry;
 import org.onesocialweb.model.activity.ActivityObject;
 import org.onesocialweb.model.atom.AtomContent;
 import org.onesocialweb.model.atom.AtomEntry;
-import org.onesocialweb.model.atom.AtomFeed;
 import org.onesocialweb.model.atom.AtomLink;
 import org.onesocialweb.model.atom.AtomText;
 
@@ -45,7 +44,7 @@ public class EntryDetail extends Activity {
 		setContentView(R.layout.entry_detail);
 		execTime = System.currentTimeMillis();
 		mPorter = (Porter) this.getApplication();
-		int targetIndex = this.getIntent().getIntExtra(Porter.EXTRAKEY_TARGET_POSTITEM_INDEX, -1);
+		int targetIndex = this.getIntent().getIntExtra(Porter.EXTRA_KEY_TARGET_POSTITEM_INDEX, -1);
 		if (mPorter.hasFeed() && mPorter.hasPostItems() && (targetIndex > -1))
 			this.displayEntryDetail(targetIndex);		
 	}
@@ -60,10 +59,9 @@ public class EntryDetail extends Activity {
 		final Button deletePostButton = (Button) findViewById(R.id.entry_detail_deletePost);
 		this.clearPreviewBlock();	 
 		final int targetIndex = index;
-		final AtomFeed feed = mPorter.getFeed();
 		final List<PostItem> postItems = mPorter.getPostItems();
 		final PostItem postItem = postItems.get(targetIndex);
-		final AtomEntry atomEntry = feed.getEntries().get(postItem.getEntryIndex());
+		final AtomEntry atomEntry = mPorter.getEntryById(postItem.getEntryId());
 		execTime = System.currentTimeMillis() - execTime;
 		Log.d("INSIDE displayEntryDetail()", "Initialization: " + execTime + " ms");
 		Log.d("INSIDE displayEntryDetail()", "Initialization completed");
@@ -89,6 +87,7 @@ public class EntryDetail extends Activity {
 		}
 		
 		if (updatedTextView != null) {
+			// TODO: format date
 			/*updatedTextView.setText(DateFormat.getMediumDateFormat(
 					getApplicationContext()).format(atomEntry.getUpdated()));*/
 		}
@@ -156,6 +155,7 @@ public class EntryDetail extends Activity {
 				}
 				break;					
 			case PostItem.TYPE_LINK:
+				// TODO: take the link not from the content, but from the link rel=related
 				if (object.hasContent()) {
 					if (!content.hasSrc()) {
 						if (content.getType().equals("html")) {
@@ -361,8 +361,8 @@ public class EntryDetail extends Activity {
 							net.betavinechronicle.client.android.PostBlog.class);
 				}
 				
-				intent.putExtra(Porter.EXTRAKEY_REQUESTCODE, Porter.REQUESTCODE_EDIT_ENTRY);
-				intent.putExtra(Porter.EXTRAKEY_TARGET_POSTITEM_INDEX, targetIndex);
+				intent.putExtra(Porter.EXTRA_KEY_REQUESTCODE, Porter.REQUESTCODE_EDIT_ENTRY);
+				intent.putExtra(Porter.EXTRA_KEY_TARGET_POSTITEM_INDEX, targetIndex);
 				startActivityForResult(intent, Porter.REQUESTCODE_EDIT_ENTRY);
 			}
 		});
@@ -380,7 +380,41 @@ public class EntryDetail extends Activity {
 			
 			@Override
 			public void onClick(View v) {
-				initiateEntryDeletion();
+				new AlertDialog.Builder(EntryDetail.this)
+				.setMessage("Are you sure?")
+				.setTitle("Deleting Entry")
+				.setCancelable(true)
+				.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+					
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+						String targetUri = null;
+						List<AtomLink> links = atomEntry.getLinks();
+						for (AtomLink link : links) {
+							if (link.hasRel() && link.hasHref())
+								if (link.getRel().equals(AtomLink.REL_EDIT))
+									targetUri = link.getHref();
+						}
+						if (targetUri == null) {
+							// TODO: show warning to user that the entry isn't allowed to be edited
+							return;
+						}
+						Intent data = new Intent();
+						data.putExtra(Porter.EXTRA_KEY_TARGET_POSTITEM_INDEX, targetIndex);
+						data.putExtra(Porter.EXTRA_KEY_TARGET_URI, targetUri);
+						data.putExtra(Porter.EXTRA_KEY_DIALOG_TITLE, "Deleting Status");
+						setResult(Porter.RESULTCODE_DELETING_ENTRY, data);
+						finish();
+					}
+				})
+				.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+					
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+						// do nothing
+					}
+				})
+				.show();
 			}
 		});
 	}
@@ -433,46 +467,15 @@ public class EntryDetail extends Activity {
 		if (requestCode == Porter.REQUESTCODE_EDIT_ENTRY) {
 			
 			switch(resultCode) {
-			case Porter.RESULTCODE_ENTRY_EDITED:
-				int targetIndex = data.getIntExtra(Porter.EXTRAKEY_TARGET_POSTITEM_INDEX, -1);
+			case Porter.RESULTCODE_EDITING_ENTRY:
+				/*int targetIndex = data.getIntExtra(Porter.EXTRA_KEY_TARGET_POSTITEM_INDEX, -1);
 				if (mPorter.hasFeed() && mPorter.hasPostItems() && (targetIndex > -1))
-					this.displayEntryDetail(targetIndex);
-				this.setResult(Porter.RESULTCODE_ENTRY_EDITED, data);
-				break;
-				
-			case Porter.RESULTCODE_ENTRY_DELETED:
-				
+					this.displayEntryDetail(targetIndex);*/
+				this.setResult(Porter.RESULTCODE_EDITING_ENTRY, data);
+				finish();
 				break;
 			}
 		}
-	}
-	
-	private void initiateEntryDeletion() {
-		new AlertDialog.Builder(this)
-		.setMessage("Are you sure?")
-		.setTitle("Deleting Entry")
-		.setCancelable(true)
-		.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-			
-			@Override
-			public void onClick(DialogInterface dialog, int which) {
-				sendDeleteRequest();
-			}
-		})
-		.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-			
-			@Override
-			public void onClick(DialogInterface dialog, int which) {
-				// do nothing
-			}
-		})
-		.show();
-	}
-	
-	private void sendDeleteRequest() {
-		// TODO: send delete resource request
-		setResult(Porter.RESULTCODE_ENTRY_DELETED);
-		finish();
 	}
 	
 	private class WebClient extends WebViewClient {

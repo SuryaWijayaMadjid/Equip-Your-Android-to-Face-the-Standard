@@ -2,13 +2,12 @@ package net.betavinechronicle.client.android;
 
 import java.io.IOException;
 
-import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.FileEntity;
-import org.apache.http.entity.StringEntity;
+import org.apache.http.client.methods.HttpPut;
 import org.apache.http.impl.client.DefaultHttpClient;
 
 
@@ -16,14 +15,16 @@ public class HttpTasks extends Thread {
 
 	static final int HTTP_GET = 1;
 	static final int HTTP_POST = 2;
+	static final int HTTP_PUT = 3;
+	static final int HTTP_DELETE = 4;
 	
 	private HttpPost mHttpPost;
 	private HttpGet mHttpGet;
+	private HttpPut mHttpPut;
+	private HttpDelete mHttpDelete;
 	private HttpClient mHttpClient;
 	private HttpResponse mHttpResponse;
-	
-	private StringEntity mStringEntity;	
-	private FileEntity mFileEntity;
+
 	private int mHttpMode;
 	private String mExceptionMessage = "";
 	
@@ -32,85 +33,63 @@ public class HttpTasks extends Thread {
 		mHttpMode = httpMode;
 		mHttpClient = new DefaultHttpClient();
 		
-		if (httpMode == HttpTasks.HTTP_GET) mHttpGet = new HttpGet(targetUri);
-		else if (httpMode == HttpTasks.HTTP_POST) mHttpPost = new HttpPost(targetUri);		
-	}
-	
-	// Set a string entity that we want to send along with the post method
-	public void setStringEntity (StringEntity stringEntity, String contentType) {
-		mStringEntity = stringEntity;
-		mStringEntity.setContentType(contentType);
-	}
-	
-	// Set a file entity that we want to send along with the post method
-	public void setFileEntity(FileEntity fileEntity) {
-		mFileEntity = fileEntity;
-	}
-	
-	public boolean hasStringEntity() {
-		return (mStringEntity != null);
-	}
-	
-	public boolean hasFileEntity() {
-		return (mFileEntity != null);
-	}
-	
-	public boolean hasAvailableEntity() {
-		if (mStringEntity != null) return true;
-		if (mFileEntity != null) return true;
-		return false;
-	}
-	
-	public HttpEntity getAvailableEntity() {
-		if (mStringEntity != null) return mStringEntity;
-		if (mFileEntity != null) return mFileEntity;
-		return null;
+		if (httpMode == HTTP_GET) mHttpGet = new HttpGet(targetUri);
+		else if (httpMode == HTTP_POST) mHttpPost = new HttpPost(targetUri);	
+		else if (httpMode == HTTP_PUT) mHttpPut = new HttpPut(targetUri);
+		else if (httpMode == HTTP_DELETE) mHttpDelete = new HttpDelete(targetUri);
 	}
 	
 	@Override
 	public void run() {
 		
-		switch (mHttpMode) {
-		
-		case HTTP_GET:
-			mHttpGet.addHeader("Accept", "text/atom+xml");
-			
-			try {
-				mHttpResponse = mHttpClient.execute(mHttpGet);
-			}
-			catch (IOException ex) {
-				mExceptionMessage = ex.getMessage();
-			}
-			catch (Exception ex) {
-				mExceptionMessage = ex.getMessage();
-			}
-			
-			break;
-			
-		case HTTP_POST:
-			HttpEntity httpEntity = this.getAvailableEntity();
-			mHttpPost.addHeader("Accept", "text/atom+xml");
-			mHttpPost.addHeader("Authorization", "Basic authorization");
-			mHttpPost.addHeader(httpEntity.getContentType());
-			
-			mHttpPost.setEntity(httpEntity);
-	    			
-			try {
-				mHttpResponse = mHttpClient.execute(mHttpPost);
-			}
-			catch (IOException ex) {
-				mExceptionMessage = ex.getMessage();
-			}
-			catch (Exception ex) {
-				mExceptionMessage = ex.getMessage();
-			}
-			
-			break;
+		try {
+			if (mHttpMode == HTTP_GET) mHttpResponse = mHttpClient.execute(mHttpGet);
+			else if (mHttpMode == HTTP_POST) mHttpResponse = mHttpClient.execute(mHttpPost);
+			else if (mHttpMode == HTTP_PUT) mHttpResponse = mHttpClient.execute(mHttpPut);
+			else if (mHttpMode == HTTP_DELETE) mHttpResponse = mHttpClient.execute(mHttpDelete);
 		}
+		catch (IOException ex) {
+			mExceptionMessage = ex.getMessage();
+		}
+		catch (Exception ex) {
+			mExceptionMessage = ex.getMessage();
+		}
+	}
+	
+	public void addHeaderToHttpPost(String name, String value) {
+		if (mHttpPost != null) mHttpPost.addHeader(name, value);
+	}
+	
+	public void addHeaderToHttpGet(String name, String value) {
+		if (mHttpGet != null) mHttpGet.addHeader(name, value);
+	}
+	
+	public void addHeaderToHttpPut(String name, String value) {
+		if (mHttpPut != null) mHttpPut.addHeader(name, value);
+	}
+	
+	public void addHeaderToHttpDelete(String name, String value) {
+		if (mHttpDelete != null) mHttpDelete.addHeader(name, value);
 	}
 	
 	public HttpResponse getHttpResponse() {
 		return mHttpResponse;
+	}
+	
+	public HttpGet getHttpGet() {
+		return mHttpGet;
+	}
+	
+	public HttpPost getHttpPost() {
+		return mHttpPost;
+	}
+	
+	public HttpPut getHttpPut() {
+		return mHttpPut;
+	}
+	
+	public HttpDelete getHttpDelete() {
+		return mHttpDelete;
 	}
 	
 	public boolean hasHttpResponse() {

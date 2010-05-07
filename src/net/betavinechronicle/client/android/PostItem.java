@@ -10,7 +10,7 @@ public class PostItem {
 	static final int SOURCE_TWITTER = 2;
 	static final int SOURCE_PICASA = 3;
 	static final int SOURCE_YOUTUBE = 4;
-	
+	static final int NOT_SPECIFIED = 0;
 	static final int TYPE_STATUS = -1;
 	static final int TYPE_BLOG = -2;
 	static final int TYPE_LINK = -3;
@@ -23,24 +23,23 @@ public class PostItem {
 	private Bitmap mImagePreview;
 	private int mSource;
 	private int mType;
-	private int mEntryIndex;
+	private String mEntryId;
 	private int mObjectIndex;
 	
 	public PostItem() {
 		mSource = 0;
 		mType = 0;
-		mEntryIndex = -1;
 		mObjectIndex = -1;
 	}
 	
 	public PostItem(String title, String content, Bitmap imagePreview, int source, 
-			int type, int entryIndex, int objectIndex) {
+			int type, String entryId, int objectIndex) {
 		mTitle = title;
 		mContent = content;
 		mImagePreview = imagePreview;
 		mSource = source;
 		mType = type;
-		mEntryIndex = entryIndex;
+		mEntryId = entryId;
 		mObjectIndex = objectIndex;
 	}
 	
@@ -56,8 +55,8 @@ public class PostItem {
 		return (mContent != null);
 	}
 	
-	public boolean hasEntryIndex() {
-		return (mEntryIndex > -1);
+	public boolean hasEntryId() {
+		return (mEntryId != null);
 	}
 	
 	public boolean hasObjectIndex() {
@@ -80,8 +79,8 @@ public class PostItem {
 		mType = type;
 	}
 	
-	public void setEntryIndex(int entryIndex) {
-		mEntryIndex = entryIndex;
+	public void setEntryId(String entryId) {
+		mEntryId = entryId;
 	}
 	
 	public void setObjectIndex(int objectIndex) {
@@ -121,8 +120,8 @@ public class PostItem {
 	}
 	
 	
-	public int getEntryIndex() {
-		return mEntryIndex;
+	public String getEntryId() {
+		return mEntryId;
 	}
 	
 	public int getObjectIndex() {

@@ -12,11 +12,13 @@
     <string name="max_char_content">85</string>
     
     <!-- The end-point where the request of feeds will be sent to -->
-    <string name="service_endpoint_uri">http://dl.dropbox.com/u/4412045/atom-activity-betavine-chronicle.xml</string>
+    <string name="service_endpoint_uri">http://chronicle.loc/api/activities</string>
     
-    <string name="debugging_endpoint_uri">http://profile.typepad.com/apparentlymart/activity/atom.xml</string>
+    <string name="debugging_endpoint_uri">http://dl.dropbox.com/u/4412045/atom-activity-betavine-chronicle.xml</string>
+    
+    <string name="debugging_endpoint_uri2">http://profile.typepad.com/apparentlymart/activity/atom.xml</string>
 	
-	<string name="debugging_endpoint_uri2">http://api.twitter.com/1/statuses/user_timeline/the4general.atom</string>
+	<string name="debugging_endpoint_uri3">http://api.twitter.com/1/statuses/user_timeline/the4general.atom</string>
 
-	<string name="debugging_endpoint_uri3">http://dl.dropbox.com/u/4412045/atom-activity-martin-atkins%28editted%29.xml</string>
+	<string name="debugging_endpoint_uri4">http://dl.dropbox.com/u/4412045/atom-activity-martin-atkins%28editted%29.xml</string>
 </resources>

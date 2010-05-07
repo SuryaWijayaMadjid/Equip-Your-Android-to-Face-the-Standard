@@ -6,7 +6,6 @@ import org.apache.commons.lang.StringEscapeUtils;
 import org.onesocialweb.model.activity.ActivityEntry;
 import org.onesocialweb.model.activity.ActivityObject;
 import org.onesocialweb.model.atom.AtomFactory;
-import org.onesocialweb.model.atom.AtomFeed;
 import org.onesocialweb.model.atom.AtomLink;
 import org.onesocialweb.model.atom.AtomText;
 import org.onesocialweb.model.atom.DefaultAtomFactory;
@@ -82,18 +81,17 @@ public class SharePicture extends Activity {
 			}
 		});
 		
-		if (this.getIntent().getIntExtra(Porter.EXTRAKEY_REQUESTCODE, 0)
+		if (this.getIntent().getIntExtra(Porter.EXTRA_KEY_REQUESTCODE, 0)
 				== Porter.REQUESTCODE_EDIT_ENTRY) {
 			postButton.setText("Confirm Edit");
 			this.setTitle("Edit Link - Betavine Chronicle Client");
 			
 			final int targetIndex = this.getIntent().getIntExtra(
-					Porter.EXTRAKEY_TARGET_POSTITEM_INDEX, -1);
+					Porter.EXTRA_KEY_TARGET_POSTITEM_INDEX, -1);
 			if (mPorter.hasFeed() && mPorter.hasPostItems() && (targetIndex > -1)) {
-				final AtomFeed feed = mPorter.getFeed();
 				final List<PostItem> postItems = mPorter.getPostItems();
 				final PostItem postItem = postItems.get(targetIndex);
-				final ActivityEntry entry = (ActivityEntry) feed.getEntries().get(postItem.getEntryIndex());
+				final ActivityEntry entry = (ActivityEntry) mPorter.getEntryById(postItem.getEntryId());
 								
 				final ActivityObject object = entry.getObjects().get(postItem.getObjectIndex());
 				final AtomText title = object.getTitle();
@@ -132,8 +130,8 @@ public class SharePicture extends Activity {
 						}
 							
 						Intent data = new Intent();
-						data.putExtra(Porter.EXTRAKEY_TARGET_POSTITEM_INDEX, targetIndex);
-						setResult(Porter.RESULTCODE_ENTRY_EDITED, data);
+						data.putExtra(Porter.EXTRA_KEY_TARGET_POSTITEM_INDEX, targetIndex);
+						setResult(Porter.RESULTCODE_EDITING_ENTRY, data);
 						finish();
 					}
 				});			

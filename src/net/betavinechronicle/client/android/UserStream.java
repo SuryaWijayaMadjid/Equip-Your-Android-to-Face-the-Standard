@@ -1,9 +1,11 @@
 package net.betavinechronicle.client.android;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.http.entity.StringEntity;
 import org.onesocialweb.model.activity.ActivityEntry;
 import org.onesocialweb.model.activity.ActivityObject;
 import org.onesocialweb.model.atom.AtomEntry;
@@ -94,8 +96,8 @@ public class UserStream extends ListActivity {
 					long id) {
 				Intent intent = new Intent(getApplicationContext(), 
 						net.betavinechronicle.client.android.EntryDetail.class);
-				intent.putExtra(Porter.EXTRAKEY_REQUESTCODE, Porter.REQUESTCODE_VIEW_ENTRY);
-				intent.putExtra(Porter.EXTRAKEY_TARGET_POSTITEM_INDEX, position);
+				intent.putExtra(Porter.EXTRA_KEY_REQUESTCODE, Porter.REQUESTCODE_VIEW_ENTRY);
+				intent.putExtra(Porter.EXTRA_KEY_TARGET_POSTITEM_INDEX, position);
 				startActivityForResult(intent, Porter.REQUESTCODE_VIEW_ENTRY);
 			}
 		});
@@ -131,14 +133,14 @@ public class UserStream extends ListActivity {
     	switch (item.getItemId()) {
     	case R.id.userStream_options_postOrShare: 
     		intent = new Intent(this, net.betavinechronicle.client.android.PostOrShare.class);
-    		intent.putExtra(Porter.EXTRAKEY_REQUESTCODE, Porter.REQUESTCODE_POST_OR_SHARE);
+    		intent.putExtra(Porter.EXTRA_KEY_REQUESTCODE, Porter.REQUESTCODE_POST_OR_SHARE);
 			this.startActivityForResult(intent, Porter.REQUESTCODE_POST_OR_SHARE);
     		return true;
     		
     	case R.id.userStream_options_setFilter: return true;
     	case R.id.userStream_options_profile: 
     		intent = new Intent(this, net.betavinechronicle.client.android.EditProfile.class);
-    		intent.putExtra(Porter.EXTRAKEY_REQUESTCODE, Porter.REQUESTCODE_EDIT_PROFILE);
+    		intent.putExtra(Porter.EXTRA_KEY_REQUESTCODE, Porter.REQUESTCODE_EDIT_PROFILE);
     		this.startActivityForResult(intent, Porter.REQUESTCODE_EDIT_PROFILE);
     		return true;
     	
@@ -171,12 +173,11 @@ public class UserStream extends ListActivity {
     				null,
     				PostItem.SOURCE_PICASA, 
     				PostItem.TYPE_STATUS,
-    				0,
+    				"fasefwe",
     				0);
     		mPostItems.add(0, newPostItem);
     		mPostItemAdapter.insert(newPostItem, 0);
-    		mPostItemAdapter.notifyDataSetChanged();
-    		
+    		mPostItemAdapter.notifyDataSetChanged();    		
     		break;
     		
     	case R.id.userStream_context_editPost: break;
@@ -192,16 +193,22 @@ public class UserStream extends ListActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
     	super.onActivityResult(requestCode, resultCode, data);
+    	
     	if (requestCode == Porter.REQUESTCODE_PROMPT_USERNAME && resultCode == RESULT_OK) {
     		String username = data.getCharSequenceExtra("username").toString();
-    		this.requestFeeds(this.getString(R.string.service_endpoint_uri)); 
+    		mPorter.savePreferenceString(Porter.PREFERENCES_KEY_USERNAME, username);
+    		this.requestFeeds(this.getString(R.string.service_endpoint_uri) + "?username=" + username); 
             mProgressDialog = ProgressDialog.show(this, "Retrieving Stream of " + username, 
             		"Please wait...");
     		return;
     	}
     	
     	Intent intent = null;
-    	
+    	String username = mPorter.loadPreferenceString(Porter.PREFERENCES_KEY_USERNAME, "ekoadipg");
+    	int postItemIndex = -1;
+    	if (data != null)
+    		postItemIndex = data.getIntExtra(Porter.EXTRA_KEY_TARGET_POSTITEM_INDEX, -1);
+		
     	switch (resultCode) {
     	case Porter.RESULTCODE_SUBACTIVITY_CHAINCLOSE:
     		finish();
@@ -217,10 +224,9 @@ public class UserStream extends ListActivity {
 			this.startActivityForResult(intent,1);
 			break;
     	
-    	case Porter.RESULTCODE_ENTRY_EDITED:
-    		int targetIndex = data.getIntExtra(Porter.EXTRAKEY_TARGET_POSTITEM_INDEX, -1);
-    		PostItem postItem = mPostItems.get(targetIndex);
-    		AtomEntry atomEntry = mPorter.getFeed().getEntries().get(postItem.getEntryIndex());
+    	case Porter.RESULTCODE_EDITING_ENTRY:
+    		/*PostItem postItem = mPostItems.get(targetIndex);
+    		AtomEntry atomEntry = mPorter.getEntryById(postItem.getEntryId());
     		if (atomEntry instanceof ActivityEntry) {
     			postItem.setContent(this.generateContent(
     					((ActivityEntry) atomEntry).getObjects().get(postItem.getObjectIndex()))
@@ -230,11 +236,31 @@ public class UserStream extends ListActivity {
     			postItem.setContent(this.generateContent(atomEntry));
     		}
     		this.mPostItemAdapter.notifyDataSetChanged();
-    		this.setSelection(targetIndex);
+    		this.setSelection(targetIndex);*/
+    		if (postItemIndex < 0) break;
+    		mProgressDialog = ProgressDialog.show(this, 
+    				data.getCharSequenceExtra(Porter.EXTRA_KEY_DIALOG_TITLE), 
+    				"Please wait...");
+    		this.editEntry(data.getCharSequenceExtra(Porter.EXTRA_KEY_TARGET_URI).toString(),
+    				data.getCharSequenceExtra(Porter.EXTRA_KEY_XML_CONVERTED_ENTRY).toString(),
+    				postItemIndex);
     		break;
     		
-    	case Porter.RESULTCODE_ENTRY_DELETED:
-    		
+    	case Porter.RESULTCODE_DELETING_ENTRY:
+    		if (postItemIndex < 0) break;
+    		mProgressDialog = ProgressDialog.show(this, 
+    				data.getCharSequenceExtra(Porter.EXTRA_KEY_DIALOG_TITLE), 
+    				"Please wait...");
+    		this.deleteEntry(data.getCharSequenceExtra(Porter.EXTRA_KEY_TARGET_URI).toString(),
+    				postItemIndex);
+    		break;
+    	
+    	case Porter.RESULTCODE_POSTING_ENTRY:
+    		mProgressDialog = ProgressDialog.show(this, 
+    				data.getCharSequenceExtra(Porter.EXTRA_KEY_DIALOG_TITLE), 
+    				"Please wait...");
+    		this.postEntry(this.getString(R.string.service_endpoint_uri) + "?username=" + username,
+    				data.getCharSequenceExtra(Porter.EXTRA_KEY_XML_CONVERTED_ENTRY).toString());
     		break;
     	}
     }
@@ -250,9 +276,246 @@ public class UserStream extends ListActivity {
     	startActivityForResult(intent, Porter.REQUESTCODE_PROMPT_USERNAME);
     }
     
+    private void deleteEntry(String endpointUri, final int postItemIndex) {
+    	HttpTasks httpDeleteRequest = new HttpTasks(endpointUri, HttpTasks.HTTP_DELETE) {
+    		
+    		@Override
+    		public void run() {
+    			super.run();
+    			Log.d("INSIDE deleteEntry()", "Finished executing DELETE request");
+    			if (this.hasHttpResponse()) {
+    				int statusCode = this.getHttpResponse().getStatusLine().getStatusCode();
+    				Log.d("INSIDE deleteEntry()", "Has HttpResponse, Status Code:" + this.getHttpResponse().getStatusLine().getStatusCode());
+    				if (statusCode != 200)
+    					return;
+    				mProgDialogTitle = "Updating Stream";
+		        	runOnUiThread(mChangeProgDialogTitle);
+    				PostItem postItem = mPostItems.get(postItemIndex);
+	        		AtomEntry originalEntry = mPorter.getEntryById(postItem.getEntryId());
+			        mPorter.getFeed().getEntries().remove(originalEntry);
+			        mPostItems.remove(postItem);
+			        runOnUiThread(new Runnable() {
+			    		@Override
+			    		public void run() {
+			    			mPostItemAdapter.remove(mPostItemAdapter.getItem(postItemIndex));
+			    		}		
+			    	});
+			        runOnUiThread(mRefreshAdapter);
+    			}
+    			else 
+					Log.e("INSIDE deleteEntry() HttpResponse check", 
+							(this.getExceptionMessage() != null)? 
+									this.getExceptionMessage():"Http response is null");
+    			mProgressDialog.dismiss();
+    		}
+    	};
+    	
+    	httpDeleteRequest.addHeaderToHttpDelete("User-Agent", "AMC_BV/0.1");
+    	Log.d("INSIDE deleteEntry()", "Finished setting the entity and headers");
+    	httpDeleteRequest.start();
+    }
+    
+    private void editEntry(String endpointUri, String xmlActivityEntry, final int postItemIndex) {
+    	HttpTasks httpPutRequest = new HttpTasks(endpointUri, HttpTasks.HTTP_PUT) {
+    		
+    		@Override
+    		public void run() {
+    			super.run();
+    			Log.d("INSIDE editEntry()", "Finished executing PUT request");
+    			if (this.hasHttpResponse()) {
+    				int statusCode = this.getHttpResponse().getStatusLine().getStatusCode();
+    				Log.d("INSIDE editEntry()", "Has HttpResponse, Status Code:" + this.getHttpResponse().getStatusLine().getStatusCode());
+    				if (statusCode != 200)
+    					return;
+    				AtomEntry atomEntry = null;
+    				try {
+						mProgDialogTitle = "Parsing Response";
+			        	runOnUiThread(mChangeProgDialogTitle);
+			        	XmlPullParserFactory xppFactory = XmlPullParserFactory.newInstance();
+			        	xppFactory.setNamespaceAware(true);
+			        	XmlPullParser xpp = xppFactory.newPullParser();
+			        	xpp.setInput(this.getHttpResponse().getEntity().getContent(), "UTF-8");
+			        	DefaultXppActivityReader xppActivityReader = new DefaultXppActivityReader();
+			        	xpp.next();
+			        	atomEntry = xppActivityReader.parseEntry(xpp);
+			        }
+			        catch(XmlPullParserException ex) {
+			        	Log.e("INSIDE editEntry() XPP", ex.getMessage());
+			        }
+			        catch(IOException ex) {
+			        	Log.e("INSIDE editEntry() XPP", ex.getMessage());
+			        }
+			        catch(Exception ex) {
+			        	Log.e("INSIDE editEntry() XPP", ex.getMessage());
+			        }
+			        
+			        if (atomEntry != null) {
+			        	mProgDialogTitle = "Updating Stream";
+			        	runOnUiThread(mChangeProgDialogTitle);
+		        		final PostItem postItem = mPostItems.get(postItemIndex);
+		        		AtomEntry originalEntry = mPorter.getEntryById(postItem.getEntryId());
+		        		originalEntry = atomEntry;
+		        		postItem.setTitle(generateTitle(originalEntry));
+		        		// make the content of the post-item to be displayed
+		        		if (atomEntry instanceof ActivityEntry) {
+		        			postItem.setContent(generateContent(
+		        					((ActivityEntry) originalEntry).getObjects().get(
+		        							postItem.getObjectIndex()))
+		        					);
+		        		}
+		        		else { // The entry is a regular atom-entry        			
+		        			postItem.setContent(generateContent(originalEntry));
+		        		} 
+		        		
+		        		runOnUiThread(mRefreshAdapter);
+			        }
+			        else 
+			        	Log.e("INSIDE editEntry()", "Response entry is null");
+			        
+    			}
+    			else 
+					Log.e("INSIDE editEntry() HttpResponse check", 
+							(this.getExceptionMessage() != null)? 
+									this.getExceptionMessage():"Http response is null");
+    			mProgressDialog.dismiss();
+    		}
+    	};
+    	
+    	try {
+    		httpPutRequest.getHttpPut().setEntity(new StringEntity(xmlActivityEntry));
+    		httpPutRequest.addHeaderToHttpPut("User-Agent", "AMC_BV/0.1");
+    		httpPutRequest.addHeaderToHttpPut("Content-Type", "application/atom+xml;type=entry");
+	    	Log.d("INSIDE editEntry()", "Finished setting the entity and headers");
+	    	httpPutRequest.start();
+		} 
+    	catch (UnsupportedEncodingException ex) {
+    		Log.e("CREATING StringEntity", ex.getMessage());
+    		mProgressDialog.dismiss();
+		}
+    }
+    
+    private void postEntry(String endpointUri, String xmlActivityEntry)	{
+    	HttpTasks httpPostRequest = new HttpTasks(endpointUri, HttpTasks.HTTP_POST) {
+    		
+    		@Override
+    		public void run() {
+    			super.run();
+    			Log.d("INSIDE postEntry()", "Finished executing POST request");
+    			if (this.hasHttpResponse()) {
+    				int statusCode = this.getHttpResponse().getStatusLine().getStatusCode();
+    				Log.d("INSIDE postEntry()", "Has HttpResponse, Status Code:" + this.getHttpResponse().getStatusLine().getStatusCode());
+    				if (statusCode != 200 && statusCode != 201)
+    					return;
+    				AtomEntry atomEntry = null;
+    				try {
+						mProgDialogTitle = "Parsing Response";
+			        	runOnUiThread(mChangeProgDialogTitle);
+			        	XmlPullParserFactory xppFactory = XmlPullParserFactory.newInstance();
+			        	xppFactory.setNamespaceAware(true);
+			        	XmlPullParser xpp = xppFactory.newPullParser();
+			        	xpp.setInput(this.getHttpResponse().getEntity().getContent(), "UTF-8");
+			        	DefaultXppActivityReader xppActivityReader = new DefaultXppActivityReader();
+			        	xpp.next();
+			        	atomEntry = xppActivityReader.parseEntry(xpp);
+			        }
+			        catch(XmlPullParserException ex) {
+			        	Log.e("INSIDE postEntry()", ex.getMessage());
+			        }
+			        catch(IOException ex) {
+			        	Log.e("INSIDE postEntry()", ex.getMessage());
+			        }
+			        catch(Exception ex) {
+			        	Log.e("INSIDE postEntry()", ex.getMessage());
+			        }
+			        
+			        if (atomEntry != null) {
+			        	mProgDialogTitle = "Updating Stream";
+			        	runOnUiThread(mChangeProgDialogTitle);
+			        	String titleToDisplay = "";
+		        		int sourceToDisplay = PostItem.SOURCE_STORYTLR;
+		        		int typeToDisplay = PostItem.NOT_SPECIFIED;
+		        		mPorter.getFeed().addEntry(atomEntry);
+		        		titleToDisplay = generateTitle(atomEntry);
+		        		
+		        		// make the content of the post-item to be displayed
+		        		if (atomEntry instanceof ActivityEntry) { 
+		        			// each object will represent a post-item
+		        			ActivityEntry activityEntry = (ActivityEntry) atomEntry;
+		        			List<ActivityObject> objects = activityEntry.getObjects();
+		        			int objectCount = 0;
+		        			for (ActivityObject object : objects) {
+		        				typeToDisplay = PostItem.getTypeByObjectType(object.getType());
+		        				mPostItems.add(0, new PostItem(
+				        				titleToDisplay,
+				        				generateContent(object),
+				        				generateImagePreview(object),
+				        				sourceToDisplay,
+				        				typeToDisplay,
+				        				activityEntry.getId(),
+				        				objectCount));
+		        				runOnUiThread(new Runnable() {
+						    		@Override
+						    		public void run() {
+						    			mPostItemAdapter.insert(mPostItems.get(0), 0);
+						    		}		
+						    	});
+		        				objectCount++;
+		        			}
+		        		}
+		        		else { // The entry is a regular atom-entry        			
+		        			mPostItems.add(0, new PostItem(
+			        				titleToDisplay,
+			        				generateContent(atomEntry),
+			        				null,
+			        				sourceToDisplay,
+			        				typeToDisplay,
+			        				atomEntry.getId(),
+			        				-1));
+		        			runOnUiThread(new Runnable() {
+					    		@Override
+					    		public void run() {
+					    			mPostItemAdapter.insert(mPostItems.get(0), 0);
+					    		}		
+					    	});
+		        		} 
+		        		runOnUiThread(mRefreshAdapter);
+		        		runOnUiThread(new Runnable() {
+				    		@Override
+				    		public void run() {
+				        		setSelection(0);
+				    		}		
+				    	});
+			        }
+			        else {
+			        	Log.e("INSIDE postEntry()", "Response entry is null");
+			        }
+    			}
+    			else
+					Log.e("INSIDE postEntry()", 
+							(this.getExceptionMessage() != null)? 
+									this.getExceptionMessage():"Http response is null");
+        		runOnUiThread(mDismissProgDialog);
+    		}
+    		
+    	};
+    	
+    	try {
+			httpPostRequest.getHttpPost().setEntity(new StringEntity(xmlActivityEntry));
+	    	httpPostRequest.addHeaderToHttpPost("User-Agent", "AMC_BV/0.1");
+	    	httpPostRequest.addHeaderToHttpPost("Content-Type", "application/atom+xml;type=entry");
+	    	Log.d("INSIDE postEntry()", "Finished setting the entity and headers");
+	    	httpPostRequest.start();
+		} 
+    	catch (UnsupportedEncodingException ex) {
+    		Log.e("CREATING StringEntity", ex.getMessage());
+    		mProgressDialog.dismiss();
+		}
+    }
+    
     //requesting feeds to the end-point (refreshing post-items list)
     private void requestFeeds(String endpointUri) {
-    	new HttpTasks(endpointUri, HttpTasks.HTTP_GET) {
+    	Log.d("INSIDE requestFeeds()", "endpointUri=" + endpointUri);
+    	HttpTasks httpGetRequest = new HttpTasks(endpointUri, HttpTasks.HTTP_GET) {
 			
 			@Override
 			public void run() {
@@ -265,7 +528,7 @@ public class UserStream extends ListActivity {
 					AtomFeed feed = null;
 		        	try {
 						mProgDialogTitle = "Parsing Stream";
-			        	runOnUiThread(changeProgDialogTitle);
+			        	runOnUiThread(mChangeProgDialogTitle);
 			        	Log.d("inside try before making xpp", "PHASE-2");
 			        	runtime = System.currentTimeMillis();
 						XmlPullParserFactory xppFactory = XmlPullParserFactory.newInstance();
@@ -294,7 +557,7 @@ public class UserStream extends ListActivity {
 			        if (feed != null) {
 			        	mPorter.setFeed(feed);
 			        	mProgDialogTitle = "Displaying Stream";
-			        	runOnUiThread(changeProgDialogTitle);
+			        	runOnUiThread(mChangeProgDialogTitle);
 			        	runtime = System.currentTimeMillis();
 			        	//displayUserProfile(feed.getAuthors().get(0));
 			        	mPostItems = new ArrayList<PostItem>();
@@ -305,7 +568,7 @@ public class UserStream extends ListActivity {
 			        		atomEntry = atomEntries.get(i);
 			        		String titleToDisplay = "";
 			        		int sourceToDisplay = i%4;
-			        		int typeToDisplay = 0;
+			        		int typeToDisplay = PostItem.NOT_SPECIFIED;
 			        		// TODO: if there's no title (invalid atom-feed)			        			        		
 			        		
 			        		// the title to be displayed will always be only one
@@ -327,7 +590,7 @@ public class UserStream extends ListActivity {
 					        				generateImagePreview(object),
 					        				sourceToDisplay,
 					        				typeToDisplay,
-					        				i,
+					        				activityEntry.getId(),
 					        				objectCount));
 			        				objectCount++;
 			        			}
@@ -339,7 +602,7 @@ public class UserStream extends ListActivity {
 				        				null,
 				        				sourceToDisplay,
 				        				typeToDisplay,
-				        				i,
+				        				atomEntry.getId(),
 				        				-1));
 			        		} 
 			        		
@@ -352,13 +615,16 @@ public class UserStream extends ListActivity {
 			        	Log.e("INSIDE requestFeeds()", "Feed is null");
 			        }
 		    		
-		    		runOnUiThread(updateUi);
+		    		runOnUiThread(mUpdateUi);
 				}
 				else
 					Log.e("INSIDE requestFeeds()", this.getExceptionMessage());
 			};
 			
-		}.start();
+		};
+		
+		httpGetRequest.addHeaderToHttpGet("Accept", "text/atom+xml");
+		httpGetRequest.start();
     }
     
     /*private void displayUserProfile(AtomPerson atomAuthor) {
@@ -398,9 +664,11 @@ public class UserStream extends ListActivity {
     	else {
     		titleToDisplay = this.ifHtmlRemoveMarkups(atomEntry.getTitle());
     	}*/
-    	titleToDisplay = GeneralMethods.ifHtmlRemoveMarkups(atomEntry.getTitle());
-    	titleToDisplay = GeneralMethods.getShortVersionString(titleToDisplay, mMaxTitleLength);
-    	return titleToDisplay;
+    	if (atomEntry.hasTitle()) {
+    		titleToDisplay = GeneralMethods.ifHtmlRemoveMarkups(atomEntry.getTitle());
+    		titleToDisplay = GeneralMethods.getShortVersionString(titleToDisplay, mMaxTitleLength);
+    	}
+    	return (titleToDisplay == null)? "":titleToDisplay;
     }
     
     private String generateContent(AtomEntry atomEntry) {
@@ -495,15 +763,29 @@ public class UserStream extends ListActivity {
     }
     
     //change the progress dialog's title
-    private Runnable changeProgDialogTitle = new Runnable() {
+    private Runnable mChangeProgDialogTitle = new Runnable() {
     	@Override
     	public void run() {
     		mProgressDialog.setTitle(mProgDialogTitle);
     	};
     };
     
-    //update the UI by synchronizing the TabActivity and its adapter
-    private Runnable updateUi = new Runnable() {
+    private Runnable mDismissProgDialog = new Runnable() {
+		@Override
+		public void run() {
+			mProgressDialog.dismiss();
+		}    	
+    };
+    
+    private Runnable mRefreshAdapter = new Runnable() {
+		@Override
+		public void run() {
+			mPostItemAdapter.notifyDataSetChanged();
+		}
+	};
+    
+    //update the UI by synchronizing the TabActivity and its adapter (with all of its list items)
+    private Runnable mUpdateUi = new Runnable() {
     	
     	@Override
     	public void run() {

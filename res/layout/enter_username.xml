@@ -17,6 +17,7 @@
 		android:layout_height="wrap_content"
 		android:layout_gravity="center_horizontal"
 		android:textStyle="italic"
+		android:text="ekoadipg"
 		/>
 	<Button android:id="@+id/enter_username_getFeed"
 		android:layout_width="wrap_content"
