@@ -1,6 +1,7 @@
 package net.betavinechronicle.client.android;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.List;
 
 import org.apache.commons.lang.StringEscapeUtils;
@@ -87,34 +88,26 @@ public class EntryDetail extends Activity {
 		}
 		
 		if (updatedTextView != null) {
-			// TODO: format date
-			/*updatedTextView.setText(DateFormat.getMediumDateFormat(
-					getApplicationContext()).format(atomEntry.getUpdated()));*/
+			updatedTextView.setText(
+					(new SimpleDateFormat("EEE, d MMM yyyy, HH:mm:ss Z"))
+							.format(atomEntry.getUpdated()));
 		}
 		
 		if (postItem.isTypeRecognized()) {
 			ActivityEntry activityEntry = (ActivityEntry) atomEntry;
 			ActivityObject object = activityEntry.getObjects().get(postItem.getObjectIndex());
-			AtomText title = object.getTitle();
-			AtomContent content = object.getContent(); // null if the object doesn't have it
-			AtomText summary = object.getSummary(); // null if the object doesn't have it
-			List<AtomLink> links = null;
-			String relAlternate = null;
-			String relEnclosure = null;
-			String previewData = "";
-			WebView webPreview = null;
-			TextView textPreview = null;
-			switch(postItem.getType()) {
-			case PostItem.TYPE_STATUS:			
+			
+			if (postItem.getType() == PostItem.TYPE_STATUS) {
 				if (object.hasContent()) {
+					AtomContent content = object.getContent();
 					if (!content.hasSrc()) {
 						if (content.getType().equals("html")) {
-							webPreview = this.insertWebPreview(PREVIEW_BLOCK_WEB_ID);
+							WebView webPreview = this.insertWebPreview(PREVIEW_BLOCK_WEB_ID);
 							webPreview.loadData(StringEscapeUtils.unescapeHtml(content.getValue()), 
 									"text/html", "utf-8");
 						}
 						else if (content.getType().equals("text")) {
-							textPreview = this.insertTextPreview(PREVIEW_BLOCK_TEXT_ID);
+							TextView textPreview = this.insertTextPreview(PREVIEW_BLOCK_TEXT_ID);
 							textPreview.setText("\"" + content.getValue() + "\"");
 						}
 					}
@@ -123,28 +116,38 @@ public class EntryDetail extends Activity {
 						// need to handle the object referenced by SRC
 					}
 				}
-				break;						
-			case PostItem.TYPE_BLOG:
+			}
+			else if (postItem.getType() == PostItem.TYPE_BLOG) {
 				if (object.hasContent()) {
+					AtomContent content = object.getContent();
 					if (!content.hasSrc()) {
+						String contentValue = StringEscapeUtils.unescapeHtml(content.getValue());
 						if (content.getType().equals("html")) {
-							webPreview = this.insertWebPreview(PREVIEW_BLOCK_WEB_ID);
-							previewData = StringEscapeUtils.unescapeHtml(content.getValue());
-							if (title.getType().equals("html"))
-								previewData = StringEscapeUtils.unescapeHtml(title.getValue()) 
-													+ "<br/>" + previewData;
-							else
-								previewData = "<h4>" + title.getValue() + "</h4>" + previewData;
+							WebView webPreview = this.insertWebPreview(PREVIEW_BLOCK_WEB_ID);
+							String previewData = contentValue;
+							if (object.hasTitle()) {
+								AtomText title = object.getTitle();
+								String titleValue = StringEscapeUtils.unescapeHtml(title.getValue());
+								if (title.getType().equals("html"))
+									previewData = titleValue + "<br/>" + previewData;
+								else
+									previewData = "<h4>" + titleValue + "</h4>" + previewData;
+							}
 							webPreview.loadData(previewData, "text/html", "utf-8");
 						}
 						else if (content.getType().equals("text")) {
-							textPreview = this.insertTextPreview(PREVIEW_BLOCK_TEXT_ID);
-							previewData = "\n\n" + content.getValue();
-							if (title.getType().equals("html"))
-								previewData = StringEscapeUtils.unescapeHtml(
-										GeneralMethods.ifHtmlRemoveMarkups(title)) + previewData;
-							else
-								previewData = title.getValue() + previewData;
+							TextView textPreview = this.insertTextPreview(PREVIEW_BLOCK_TEXT_ID);
+							String previewData = contentValue;
+							if (object.hasTitle()) {
+								AtomText title = object.getTitle();
+								String titleValue = StringEscapeUtils.unescapeHtml(title.getValue());
+								if (title.getType().equals("html"))
+									previewData = StringEscapeUtils.unescapeHtml(
+											GeneralMethods.ifHtmlRemoveMarkups(title))
+											+ "\n\n" + previewData;
+								else
+									previewData = titleValue + "\n\n" + previewData;
+							}							
 							textPreview.setText(previewData);
 						}
 					}
@@ -153,103 +156,125 @@ public class EntryDetail extends Activity {
 						// need to handle the object referenced by SRC
 					}
 				}
-				break;					
-			case PostItem.TYPE_LINK:
-				// TODO: take the link not from the content, but from the link rel=related
-				if (object.hasContent()) {
-					if (!content.hasSrc()) {
-						if (content.getType().equals("html")) {
-							webPreview = this.insertWebPreview(PREVIEW_BLOCK_WEB_ID);
-							previewData = StringEscapeUtils.unescapeHtml(content.getValue());
-							if (title.getType().equals("html"))
-								previewData = StringEscapeUtils.unescapeHtml(title.getValue()) 
-													+ "<br/>" + previewData;
-							else
-								previewData = "<h4>" + title.getValue() + "</h4>" + previewData;
-							if (object.hasSummary()) {
-								if (summary.getType().equals("html"))
-									previewData += "<br/>" + StringEscapeUtils.unescapeHtml(summary.getValue());
-								else
-									previewData += "<p>" + summary.getValue() + "</p>";
-							}
-							webPreview.loadData(previewData, "text/html", "utf-8");
-						}
-						else if (content.getType().equals("text")) {
-							textPreview = this.insertTextPreview(PREVIEW_BLOCK_TEXT_ID);
-							previewData = "\n\n" + content.getValue();
-							if (title.getType().equals("html"))
-								previewData = StringEscapeUtils.unescapeHtml(
-										GeneralMethods.ifHtmlRemoveMarkups(title)) + previewData;
-							else
-								previewData = title.getValue() + previewData;
-							if (object.hasSummary()) {
-								if (summary.getType().equals("html"))
-									previewData += "\n\n" + StringEscapeUtils.unescapeHtml(
-											GeneralMethods.ifHtmlRemoveMarkups(title));
-								else
-									previewData += "\n\n" + summary.getValue();
-							}
-							textPreview.setText(previewData);
-						}
-					}
-					else {
-						// TODO: contains SRC attribute, so the content value is empty
-						// need to handle the object referenced by SRC
+			}
+			else if (postItem.getType() == PostItem.TYPE_LINK) {
+				WebView webPreview = this.insertWebPreview(PREVIEW_BLOCK_WEB_ID);
+				String previewData = "";
+				if (object.hasTitle()) {
+					AtomText title = object.getTitle();
+					String titleValue = StringEscapeUtils.unescapeHtml(title.getValue());
+					if (title.getType().equals("html"))
+						previewData = titleValue + "<br/>";
+					else
+						previewData = "<h4>" + titleValue + "</h4>";
+				}
+				
+				List<AtomLink> links = object.getLinks();
+				String relRelated = null;
+				for (AtomLink link : links) {
+					if (link.hasRel() && link.hasHref()) {
+						if (link.getRel().equals(AtomLink.REL_RELATED))
+							relRelated = StringEscapeUtils.unescapeHtml(link.getHref());
 					}
 				}
-				break;
-			case PostItem.TYPE_PICTURE:
-				// <h4>title</h4><a href="link alternate"><img src="link enclosure"/></a><p>summary</p>
-				webPreview = this.insertWebPreview(PREVIEW_BLOCK_WEB_ID);
-				previewData = "";
-				if (title.getType().equals("html"))
-					previewData = StringEscapeUtils.unescapeHtml(title.getValue());
-				else
-					previewData = "<h4>" + title.getValue() + "</h4>";
-				links = object.getLinks();
-				relAlternate = null;
-				relEnclosure = null;
+				
+				if (relRelated != null) 
+					previewData += "Link:<br/><a href=\"" + relRelated + "\">" + relRelated + "</a><br/>";
+				else {
+					if (object.hasContent()) {
+						AtomContent content = object.getContent();
+						String contentValue = StringEscapeUtils.unescapeHtml(content.getValue());
+						if (!content.hasSrc()) {
+							if (content.getType().equals("html")) 
+								previewData += "<br/>" + contentValue;								
+							else if (content.getType().equals("text"))
+								previewData = "<p>" + contentValue + "</p>";
+						}
+						else {
+							// TODO: contains SRC attribute, so the content value is empty
+							// need to handle the object referenced by SRC
+						}
+					}
+				}
+				
+				if (object.hasSummary()) {
+					AtomText summary = object.getSummary();
+					String summaryValue = StringEscapeUtils.unescapeHtml(summary.getValue());
+					if (summary.getType().equals("html"))
+						previewData += "<br/>Note:<br/>" + summaryValue;
+					else
+						previewData += "<p>Note:<br/><i>" + summaryValue + "</i></p>";
+				}
+				webPreview.loadData(previewData, "text/html", "utf-8");
+			}
+			else if (postItem.getType() == PostItem.TYPE_PICTURE) {
+				WebView webPreview = this.insertWebPreview(PREVIEW_BLOCK_WEB_ID);
+				String previewData = "";
+				if (object.hasTitle()) {
+					AtomText title = object.getTitle();
+					String titleValue = StringEscapeUtils.unescapeHtml(title.getValue());
+					if (title.getType().equals("html"))
+						previewData = titleValue + "<br/>";
+					else
+						previewData = "<h4>" + titleValue + "</h4>";
+				}
+				
+				List<AtomLink> links = object.getLinks();
+				String relAlternate = null;
+				String relEnclosure = null;
 				for (AtomLink link : links) {
 					if (link.hasRel() && link.hasHref()) {
 						if (link.getRel().equals(AtomLink.REL_ALTERNATE))
-							relAlternate = link.getHref();
+							relAlternate = StringEscapeUtils.unescapeHtml(link.getHref());
 						else if (link.getRel().equals(AtomLink.REL_ENCLOSURE))
-							relEnclosure = link.getHref();
+							relEnclosure = StringEscapeUtils.unescapeHtml(link.getHref());
 					}
 				}
-				if (relAlternate != null && relEnclosure != null)
-					previewData += "<a href=\"" + relAlternate + "\"><img src=\"" + relEnclosure
-									+ "\"/></a>";
-				else if (relEnclosure != null)
-					previewData += "<img src=\"" + relEnclosure + "\"/>";
+				if (relEnclosure != null)
+					previewData += "<img src=\"" + relEnclosure + "\"/><br/>";
+				if (relAlternate != null)
+					previewData += "<br/>Alternate: <a href=\"" + relAlternate + "\">" + relAlternate + "</a>";
+				
 				if (object.hasSummary()) {
+					AtomText summary = object.getSummary();
+					String summaryValue = StringEscapeUtils.unescapeHtml(summary.getValue());
 					if (summary.getType().equals("html"))
-						previewData += "<br/>" + StringEscapeUtils.unescapeHtml(summary.getValue());
+						previewData += "<br/>Note:<br/>" + summaryValue;
 					else
-						previewData += "<p>" + summary.getValue() + "</p>";
+						previewData += "<p>Note:<br/><i>" + summaryValue + "</i></p>";
 				}
-				webPreview.loadData(previewData, "text/html", "utf-8");				
-				break;
-			case PostItem.TYPE_AUDIO:
+				webPreview.loadData(previewData, "text/html", "utf-8");		
+			}
+			else if (postItem.getType() == PostItem.TYPE_AUDIO) {
 				mediaPlayer = new MediaPlayer();
-				textPreview = this.insertTextPreview(PREVIEW_BLOCK_TEXT_ID);
-				previewData = StringEscapeUtils.unescapeHtml(
-						GeneralMethods.ifHtmlRemoveMarkups(title));
-				if (object.hasSummary()) {
-					if (summary.getType().equals("html"))
-						previewData += "\n\n" + StringEscapeUtils.unescapeHtml(
-								GeneralMethods.ifHtmlRemoveMarkups(title));
-					else
-						previewData += "\n\n" + summary.getValue();
+				TextView textPreview = this.insertTextPreview(PREVIEW_BLOCK_TEXT_ID);
+				String previewData = "";
+				if (object.hasTitle()) {
+					AtomText title = object.getTitle();
+					previewData = StringEscapeUtils.unescapeHtml(
+							GeneralMethods.ifHtmlRemoveMarkups(title));
 				}
+				
+				if (object.hasSummary()) {
+					AtomText summary = object.getSummary();
+					String summaryValue = StringEscapeUtils.unescapeHtml(summary.getValue());
+					if (summary.getType().equals("html"))
+						previewData += "\n\nNote:\n" + StringEscapeUtils.unescapeHtml(
+								GeneralMethods.ifHtmlRemoveMarkups(summary));
+					else
+						previewData += "\n\nNote:\n" + summaryValue;
+				}			
+				
+				previewData += "\n\n";
 				textPreview.setText(previewData);
+				
 				final Button listenButton = this.insertButton(PREVIEW_BLOCK_BUTTON_ID, "Listen");
-				links = object.getLinks();
-				relEnclosure = null;
+				List<AtomLink> links = object.getLinks();
+				String relEnclosure = null;
 				for (AtomLink link : links) {
 					if (link.hasRel() && link.hasHref()) {
 						if (link.getRel().equals(AtomLink.REL_ENCLOSURE))
-							relEnclosure = link.getHref();
+							relEnclosure = StringEscapeUtils.unescapeHtml(link.getHref());
 					}
 				}
 				// debug
@@ -291,30 +316,39 @@ public class EntryDetail extends Activity {
 						}
 					});
 				}
-				break;
-			case PostItem.TYPE_VIDEO:
-				webPreview = this.insertWebPreview(PREVIEW_BLOCK_WEB_ID);
-				previewData = "";
-				if (title.getType().equals("html"))
-					previewData = StringEscapeUtils.unescapeHtml(title.getValue());
-				else
-					previewData = "<h4>" + title.getValue() + "</h4>";
-				if (object.hasSummary()) {
-					if (summary.getType().equals("html"))
-						previewData += "<br/>" + StringEscapeUtils.unescapeHtml(summary.getValue()) + "<br/>";
+			}
+			else if (postItem.getType() == PostItem.TYPE_VIDEO) {
+				WebView webPreview = this.insertWebPreview(PREVIEW_BLOCK_WEB_ID);
+				String previewData = "";
+				if (object.hasTitle()) {
+					AtomText title = object.getTitle();
+					String titleValue = StringEscapeUtils.unescapeHtml(title.getValue());
+					if (title.getType().equals("html"))
+						previewData = titleValue + "<br/>";
 					else
-						previewData += "<p>" + summary.getValue() + "</p>";
+						previewData = "<h4>" + titleValue + "</h4>";
 				}
+				
+				if (object.hasSummary()) {
+					AtomText summary = object.getSummary();
+					String summaryValue = StringEscapeUtils.unescapeHtml(summary.getValue());
+					if (summary.getType().equals("html"))
+						previewData += "<br/>Note:<br/>" + summaryValue;
+					else
+						previewData += "<p>Note:<br/><i>" + summaryValue + "</i></p>";
+				}
+				
 				if (object.hasContent()) {
-					if (!content.hasSrc()) {
-						previewData += StringEscapeUtils.unescapeHtml(content.getValue());
-					}
+					AtomContent content = object.getContent();
+					String contentValue = StringEscapeUtils.unescapeHtml(content.getValue());
+					if (!content.hasSrc()) 
+						previewData += "<br/>" + contentValue;
 					else {
 						// TODO: contains SRC attribute, so the content value is empty
 						// need to handle the object referenced by SRC
 					}
 				}
-				break;				
+				webPreview.loadData(previewData, "text/html", "utf-8");	
 			}
 		}
 		else { // unrecognized object-type of activity:object
@@ -393,7 +427,7 @@ public class EntryDetail extends Activity {
 						for (AtomLink link : links) {
 							if (link.hasRel() && link.hasHref())
 								if (link.getRel().equals(AtomLink.REL_EDIT))
-									targetUri = link.getHref();
+									targetUri = StringEscapeUtils.unescapeHtml(link.getHref());
 						}
 						if (targetUri == null) {
 							// TODO: show warning to user that the entry isn't allowed to be edited

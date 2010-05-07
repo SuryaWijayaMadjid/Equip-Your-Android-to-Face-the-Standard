@@ -47,12 +47,14 @@ public class ShareLink extends Activity {
 			if (mPorter.hasFeed() && mPorter.hasPostItems() && (targetIndex > -1)) {
 				final List<PostItem> postItems = mPorter.getPostItems();
 				final PostItem postItem = postItems.get(targetIndex);
-				final ActivityEntry entry = (ActivityEntry) mPorter.getEntryById(postItem.getEntryId());
-								
+				final ActivityEntry entry = (ActivityEntry) mPorter.getEntryById(postItem.getEntryId());								
 				final ActivityObject object = entry.getObjects().get(postItem.getObjectIndex());
-				AtomText title = object.getTitle();
-				titleEditText.setText(StringEscapeUtils.unescapeHtml(
-						GeneralMethods.ifHtmlRemoveMarkups(title)));
+				
+				if (object.hasTitle()) {
+					AtomText title = object.getTitle();
+					titleEditText.setText(StringEscapeUtils.unescapeHtml(
+							GeneralMethods.ifHtmlRemoveMarkups(title)));
+				}
 				List<AtomLink> links = object.getLinks();
 				for (AtomLink link : links) {
 					if (link.hasRel() && link.hasHref())

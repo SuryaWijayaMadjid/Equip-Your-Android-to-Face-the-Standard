@@ -47,10 +47,10 @@ public class PostStatus extends Activity {
 				final List<PostItem> postItems = mPorter.getPostItems();
 				final PostItem postItem = postItems.get(targetIndex);
 				final ActivityEntry entry = (ActivityEntry) mPorter.getEntryById(postItem.getEntryId());		
-				final ActivityObject object = entry.getObjects().get(postItem.getObjectIndex());
-				AtomContent content = object.getContent();
+				final ActivityObject object = entry.getObjects().get(postItem.getObjectIndex());			
 				
-				if (content != null) {
+				if (object.hasContent()) {
+					AtomContent content = object.getContent();
 					if (!content.hasSrc()) {
 						statusEditText.setText(StringEscapeUtils.unescapeHtml(
 								GeneralMethods.ifHtmlRemoveMarkups(content)));
@@ -60,8 +60,9 @@ public class PostStatus extends Activity {
 					}
 				}
 				else {
-					statusEditText.setText(StringEscapeUtils.unescapeHtml(
-							GeneralMethods.ifHtmlRemoveMarkups(object.getTitle())));
+					if (object.hasTitle())
+						statusEditText.setText(StringEscapeUtils.unescapeHtml(
+								GeneralMethods.ifHtmlRemoveMarkups(object.getTitle())));
 				}
 				
 				postButton.setOnClickListener(new View.OnClickListener() {
@@ -73,18 +74,20 @@ public class PostStatus extends Activity {
 							// TODO: display alert dialog
 							return;
 						}
+						
 						String targetUri = null;
 						List<AtomLink> links = entry.getLinks();
 						for (AtomLink link : links) {
 							if (link.hasRel() && link.hasHref())
 								if (link.getRel().equals(AtomLink.REL_EDIT))
-									targetUri = link.getHref();
+									targetUri = StringEscapeUtils.unescapeHtml(link.getHref());
 						}
 						if (targetUri == null) {
 							// TODO: show warning to user that the entry isn't allowed to be edited
 							return;
 						}
-						AtomContent content = object.getContent();
+						
+						AtomContent content = mPorter.getAtomFactory().content();
 						content.setType("text");
 						content.setValue(StringEscapeUtils.escapeHtml(newStatus));
 						entry.setContent(content);
@@ -92,6 +95,7 @@ public class PostStatus extends Activity {
 						/*Date currentDateTime = Calendar.getInstance().getTime();
 						object.setUpdated(currentDateTime);
 						entry.setUpdated(currentDateTime);	*/
+						
 						/*final TextView debugTextView = (TextView) findViewById(R.id.debug);
 						debugTextView.setText(mActivityWriter.toXml(entry));*/
 						Intent data = new Intent();

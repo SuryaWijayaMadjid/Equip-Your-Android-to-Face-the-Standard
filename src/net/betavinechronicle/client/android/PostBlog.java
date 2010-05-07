@@ -54,15 +54,17 @@ public class PostBlog extends Activity {
 					this.setTitle("Edit Blog - Betavine Chronicle Client");
 					ActivityEntry activityEntry = (ActivityEntry) atomEntry;
 					ActivityObject object = activityEntry.getObjects().get(postItem.getObjectIndex());
-					titleEditText.setText(StringEscapeUtils.unescapeHtml(
-							GeneralMethods.ifHtmlRemoveMarkups(object.getTitle())));
+					if (object.hasTitle())
+						titleEditText.setText(StringEscapeUtils.unescapeHtml(
+								GeneralMethods.ifHtmlRemoveMarkups(object.getTitle())));
 					content = object.getContent();
 				}
 				else {
 					this.setTitle("Edit Entry - Betavine Chronicle Client");
+					if (atomEntry.hasTitle())
+						titleEditText.setText(StringEscapeUtils.unescapeHtml(
+								GeneralMethods.ifHtmlRemoveMarkups(atomEntry.getTitle())));
 					content = atomEntry.getContent();
-					titleEditText.setText(StringEscapeUtils.unescapeHtml(
-							GeneralMethods.ifHtmlRemoveMarkups(atomEntry.getTitle())));
 				}
 				
 				if (content != null) {
