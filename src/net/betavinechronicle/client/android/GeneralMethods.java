@@ -1,7 +1,9 @@
 package net.betavinechronicle.client.android;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 
@@ -100,5 +102,26 @@ public class GeneralMethods {
 			Log.e("INSIDE generateImagePreview()", ex.getMessage());
 		}
     	return bitmapImage;
+    }
+    
+    public static String getRawStringFromResponse(InputStream inputStream) {
+    	StringBuilder stringBuilder = new StringBuilder();
+		String line = "";
+		String text = "";
+		
+		BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+		try
+		{
+			while ( ( line = bufferedReader.readLine() ) != null)
+			{
+				stringBuilder.append(line + "\n");
+			}
+			text += stringBuilder.toString();
+		}
+		catch (IOException ex) {
+			Log.e("INSIDE getRawStringFromResponse():", ex.getMessage());
+		}
+		
+		return text;
     }
 }

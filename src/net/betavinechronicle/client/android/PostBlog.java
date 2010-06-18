@@ -20,6 +20,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Toast;
 
 public class PostBlog extends Activity {
 
@@ -39,27 +40,36 @@ public class PostBlog extends Activity {
 		
 		if (this.getIntent().getIntExtra(Porter.EXTRA_KEY_REQUESTCODE, 0)
 				== Porter.REQUESTCODE_EDIT_ENTRY) {
+			/*
+			 * EDIT MODE
+			 * 
+			 * PostBlog ACTIVITY HANDLES EDITING ACTIVITY-ENTRY AND REGULAR ATOM-ENTRY			 * 
+			 */
+			
 			postButton.setText("Confirm Edit");
 			
+			// GET THE INDEX OF THE CLICKED ITEM IN THE LIST-VIEW
 			final int targetIndex = this.getIntent().getIntExtra(
 					Porter.EXTRA_KEY_TARGET_POSTITEM_INDEX, -1);
+			
 			if (mPorter.hasFeed() && mPorter.hasPostItems() && (targetIndex > -1)) {
 				final List<PostItem> postItems = mPorter.getPostItems();
 				final PostItem postItem = postItems.get(targetIndex);
 				final AtomEntry atomEntry = mPorter.getEntryById(postItem.getEntryId());
-				//titleEditText.setText(GeneralMethods.ifHtmlRemoveMarkups(atomEntry.getTitle()));
 				
-				AtomContent content = null;
+				// DISPLAY THE ORIGINAL TITLE AND BLOG CONTENT				
+				AtomContent content = null;				
 				if (atomEntry instanceof ActivityEntry && postItem.hasObjectIndex()) {
 					this.setTitle("Edit Blog - Betavine Chronicle Client");
 					ActivityEntry activityEntry = (ActivityEntry) atomEntry;
 					ActivityObject object = activityEntry.getObjects().get(postItem.getObjectIndex());
-					if (object.hasTitle())
-						titleEditText.setText(StringEscapeUtils.unescapeHtml(
-								GeneralMethods.ifHtmlRemoveMarkups(object.getTitle())));
+					
+					titleEditText.setText(mPorter.extractTitleFromObject(object));
+					
 					content = object.getContent();
 				}
-				else {
+				else { 
+					// THE ENTRY IS A REGULAR ATOM-ENTRY
 					this.setTitle("Edit Entry - Betavine Chronicle Client");
 					if (atomEntry.hasTitle())
 						titleEditText.setText(StringEscapeUtils.unescapeHtml(
@@ -72,90 +82,99 @@ public class PostBlog extends Activity {
 						contentEditText.setText(StringEscapeUtils.unescapeHtml(
 								GeneralMethods.ifHtmlRemoveMarkups(content)));
 					}
-					else {
-						// TODO: not implemented yet :)
+					else { 
+						// IF THE CONTENT HAVE THE SRC VALUE (NO CONTENT VALUE)
 					}
 				}
 				
+				// POST-BUTTON CLICKED
 				postButton.setOnClickListener(new View.OnClickListener() {
-					
 					@Override
 					public void onClick(View v) {
-						String newTitle = titleEditText.getText().toString().trim();
-						String newContent = contentEditText.getText().toString().trim();
+						String newTitle = StringEscapeUtils.escapeHtml(titleEditText.getText()
+								.toString()).trim();
+						String newContent = StringEscapeUtils.escapeHtml(contentEditText.getText()
+								.toString()).trim();
+						
 						if (newTitle.equals("") || newContent.equals("")) {
-							// TODO: display alert dialog
+							showToastMessage("Please fill in the title and content box.");
 							return;
 						}
-						// TODO: updated?
-						//Date currentDateTime = Calendar.getInstance().getTime();
-						String targetUri = null;
-						List<AtomLink> links = atomEntry.getLinks();
-						for (AtomLink link : links) {
-							if (link.hasRel() && link.hasHref())
-								if (link.getRel().equals(AtomLink.REL_EDIT))
-									targetUri = link.getHref();
-						}
-						if (targetUri == null) {
-							// TODO: show warning to user that the entry isn't allowed to be edited
-							return;
-						}	
-						AtomText title = null;
-						AtomContent content = null;
+
+						Date currentDateTime = Calendar.getInstance().getTime();
+												
+						AtomText title = mPorter.getAtomFactory().text("text", newTitle);						
+						AtomContent content = mPorter.getAtomFactory().content(newContent, "text", null);
+						
 						String xmlEntry = "";
+						String targetUri = null;
 						if (atomEntry instanceof ActivityEntry && postItem.hasObjectIndex()) {
 							ActivityEntry activityEntry = (ActivityEntry) atomEntry;
 							ActivityObject object = activityEntry.getObjects().get(postItem.getObjectIndex());
-							title = object.getTitle();
-							content = object.getContent();
-							title.setType("text");
-							title.setValue(StringEscapeUtils.escapeHtml(newTitle));
-							content.setType("text");
-							content.setValue(StringEscapeUtils.escapeHtml(newContent));
+							
+							object.setTitle(title);
+							object.setContent(content);
 							activityEntry.setContent(content);
-							/*object.setUpdated(currentDateTime);
-							activityEntry.setUpdated(currentDateTime);*/
+							object.setUpdated(currentDateTime);
+							activityEntry.setUpdated(currentDateTime);
+							
+							targetUri = mPorter.extractHrefFromLinks(object.getLinks(), AtomLink.REL_EDIT);
 							xmlEntry = mActivityWriter.toXml(activityEntry);
 						}
 						else {
-							title = atomEntry.getTitle();
-							content = atomEntry.getContent();
-							//atomEntry.setUpdated(currentDateTime);
-							
+							atomEntry.setTitle(title);
+							atomEntry.setContent(content);
+							atomEntry.setUpdated(currentDateTime);							
 							// TODO: atom-entry => activity-entry (object-entry)
 						}
+						
+						if (targetUri == null) { 
+							targetUri = mPorter.extractHrefFromLinks(atomEntry.getLinks(), AtomLink.REL_EDIT);
+							if (targetUri == null) {
+								// NO URI PROVIDED FOR THE EDIT PROCESS
+								showToastMessage("This entry is not allowed to be edited...");
+								return;
+							}
+						}
+						
 						/*final TextView debugTextView = (TextView) findViewById(R.id.debug);
 						debugTextView.setText(xmlEntry);*/
-						Intent data = new Intent();
-						data.putExtra(Porter.EXTRA_KEY_TARGET_POSTITEM_INDEX, targetIndex);
-						data.putExtra(Porter.EXTRA_KEY_XML_CONVERTED_ENTRY, xmlEntry);
-						data.putExtra(Porter.EXTRA_KEY_TARGET_URI, targetUri);
-						data.putExtra(Porter.EXTRA_KEY_DIALOG_TITLE, "Editing Status");
-						setResult(Porter.RESULTCODE_EDITING_ENTRY, data);
+					
+						setResult(Porter.RESULTCODE_EDITING_ENTRY, 
+								mPorter.prepareIntentForEditing(targetIndex, xmlEntry, 
+										targetUri, "Editing Blog Entry"));
 						finish();
 					}
 				});
 			}
 		}
 		else {
+
+			/*
+			 * POST MODE
+			 */
+			
+			// POST-BUTTON CLICKED
 			postButton.setOnClickListener(new View.OnClickListener() {
-				
 				@Override
 				public void onClick(View v) {
-					String newTitle = titleEditText.getText().toString().trim();
-					String newContent = contentEditText.getText().toString().trim();
+					String newTitle = StringEscapeUtils.escapeHtml(titleEditText.getText()
+							.toString()).trim();
+					String newContent = StringEscapeUtils.escapeHtml(contentEditText.getText()
+							.toString()).trim();
+					
 					if (newTitle.equals("") || newContent.equals("")) {
-						// TODO: display alert dialog
+						showToastMessage("Please fill in the title and content box.");
 						return;
 					}
+					
 					String username = mPorter.loadPreferenceString(Porter.PREFERENCES_KEY_USERNAME, 
 							"Anonymous");
 					Date currentDateTime = Calendar.getInstance().getTime();
-					AtomText title = mPorter.getAtomFactory().text("text", 
-							StringEscapeUtils.escapeHtml(newTitle));
-					AtomContent content = mPorter.getAtomFactory().content();
-					content.setType("text");
-					content.setValue(StringEscapeUtils.escapeHtml(newContent));
+					
+					AtomText title = mPorter.getAtomFactory().text("text", newTitle);
+					
+					AtomContent content = mPorter.getAtomFactory().content(newContent, "text", null);
 					
 					ActivityObject object = mPorter.constructObject(currentDateTime, title, 
 							ActivityObject.ARTICLE, content);
@@ -168,19 +187,29 @@ public class PostBlog extends Activity {
 					
 					/*final TextView debugTextView = (TextView) findViewById(R.id.debug);
 					debugTextView.setText(mActivityWriter.toXml(entry));*/
+
+					// INCREMENT NEXT BLOG ENTRY'S ID
+					mPorter.incrementPreferenceInt(ActivityObject.ARTICLE);
+					
+					/*
+					 *  SET AN INTENT IN ACTIVITY'S RESULT 
+					 *  AND 
+					 *  GO BACK TO UserStream ACTIVITY WITH THE RESULT
+					 */
 					Intent data = new Intent();
 					data.putExtra(Porter.EXTRA_KEY_XML_CONVERTED_ENTRY, mActivityWriter.toXml(entry));
-					data.putExtra(Porter.EXTRA_KEY_DIALOG_TITLE, "Posting New Blog");
+					data.putExtra(Porter.EXTRA_KEY_DIALOG_TITLE, "Posting new Blog");					
 					if (getParent() == null) 
 						setResult(Porter.RESULTCODE_POSTING_ENTRY, data);
 					else
 						getParent().setResult(Porter.RESULTCODE_POSTING_ENTRY, data);
-					String preferenceKey = mPorter.getPreferenceKeyFromObjectType(ActivityObject.ARTICLE);
-					mPorter.savePreferenceInt(preferenceKey, 
-							mPorter.loadPreferenceInt(preferenceKey, 0) + 1);
 					finish();
 				}
 			});
 		}
+	}
+	
+	private void showToastMessage(String message) {
+		Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
 	}
 }

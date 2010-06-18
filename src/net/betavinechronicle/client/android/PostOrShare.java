@@ -24,43 +24,49 @@ public class PostOrShare extends TabActivity {
 		// Add Post Status tab to the tab host
 		intent = new Intent().setClass(getApplicationContext(), 
 				net.betavinechronicle.client.android.PostStatus.class);		
-		tabSpec = tabHost.newTabSpec("postOrShare_status").setIndicator(
-				getLayoutInflater().inflate(R.layout.tab_indicator, null)).setContent(intent);
+		/*tabSpec = tabHost.newTabSpec("postOrShare_status").setIndicator(
+				getLayoutInflater().inflate(R.layout.tab_indicator, null)).setContent(intent);*/
+		tabSpec = tabHost.newTabSpec("postOrShare_status").setIndicator("Status").setContent(intent);
 		tabHost.addTab(tabSpec);
 		
 		// Add Post Blog tab to the tab host
 		intent = new Intent().setClass(getApplicationContext(), 
 				net.betavinechronicle.client.android.PostBlog.class);		
-		tabSpec = tabHost.newTabSpec("postOrShare_blog").setIndicator(
-				getLayoutInflater().inflate(R.layout.tab_indicator, null)).setContent(intent);
+		/*tabSpec = tabHost.newTabSpec("postOrShare_blog").setIndicator(
+				getLayoutInflater().inflate(R.layout.tab_indicator, null)).setContent(intent);*/
+		tabSpec = tabHost.newTabSpec("postOrShare_status").setIndicator("Blog").setContent(intent);
 		tabHost.addTab(tabSpec);
 		
 		// Add Share Link tab to the tab host
 		intent = new Intent().setClass(getApplicationContext(), 
 				net.betavinechronicle.client.android.ShareLink.class);		
-		tabSpec = tabHost.newTabSpec("postOrShare_link").setIndicator(
-				getLayoutInflater().inflate(R.layout.tab_indicator, null)).setContent(intent);
+		/*tabSpec = tabHost.newTabSpec("postOrShare_link").setIndicator(
+				getLayoutInflater().inflate(R.layout.tab_indicator, null)).setContent(intent);*/
+		tabSpec = tabHost.newTabSpec("postOrShare_status").setIndicator("Link").setContent(intent);
 		tabHost.addTab(tabSpec);
 		
 		// Add Share Picture tab to the tab host
 		intent = new Intent().setClass(getApplicationContext(), 
 				net.betavinechronicle.client.android.SharePicture.class);		
-		tabSpec = tabHost.newTabSpec("postOrShare_picture").setIndicator(
-				getLayoutInflater().inflate(R.layout.tab_indicator, null)).setContent(intent);
+		/*tabSpec = tabHost.newTabSpec("postOrShare_picture").setIndicator(
+				getLayoutInflater().inflate(R.layout.tab_indicator, null)).setContent(intent);*/
+		tabSpec = tabHost.newTabSpec("postOrShare_status").setIndicator("Picture").setContent(intent);
 		tabHost.addTab(tabSpec);
 		
 		// Add Share Audio tab to the tab host
 		intent = new Intent().setClass(getApplicationContext(), 
 				net.betavinechronicle.client.android.ShareAudio.class);		
-		tabSpec = tabHost.newTabSpec("postOrShare_audio").setIndicator(
-				getLayoutInflater().inflate(R.layout.tab_indicator, null)).setContent(intent);
+		/*tabSpec = tabHost.newTabSpec("postOrShare_audio").setIndicator(
+				getLayoutInflater().inflate(R.layout.tab_indicator, null)).setContent(intent);*/
+		tabSpec = tabHost.newTabSpec("postOrShare_status").setIndicator("Audio").setContent(intent);
 		tabHost.addTab(tabSpec);
 		
 		// Add Share Video tab to the tab host
 		intent = new Intent().setClass(getApplicationContext(), 
 				net.betavinechronicle.client.android.ShareVideo.class);		
-		tabSpec = tabHost.newTabSpec("postOrShare_video").setIndicator(
-				getLayoutInflater().inflate(R.layout.tab_indicator, null)).setContent(intent);
+		/*tabSpec = tabHost.newTabSpec("postOrShare_video").setIndicator(
+				getLayoutInflater().inflate(R.layout.tab_indicator, null)).setContent(intent);*/
+		tabSpec = tabHost.newTabSpec("postOrShare_status").setIndicator("Video").setContent(intent);
 		tabHost.addTab(tabSpec);
 		
 		tabHost.setCurrentTab(0);

@@ -3,7 +3,7 @@
     <string name="app_name">Betavine Chronicle Android Client</string>
 	
 	<!-- Maximum number of first entries to be shown in the stream -->
-    <string name="max_entries">20</string>
+    <string name="max_entries">10</string>
     
     <!-- Maximum number of first characters of title to be displayed in brief display -->
     <string name="max_char_title">50</string>

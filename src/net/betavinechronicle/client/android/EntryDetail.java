@@ -50,6 +50,13 @@ public class EntryDetail extends Activity {
 			this.displayEntryDetail(targetIndex);		
 	}
 	
+	@Override
+	protected void onDestroy() {
+		if (mediaPlayer != null)
+			mediaPlayer.release();
+		super.onDestroy();
+	}
+	
 	private void displayEntryDetail(int index) {
 		final ImageView sourceImageView = (ImageView) findViewById(R.id.entry_detail_sourceIcon);
 		final ImageView typeImageView = (ImageView) findViewById(R.id.entry_detail_typeIcon);
@@ -235,14 +242,24 @@ public class EntryDetail extends Activity {
 				if (relAlternate != null)
 					previewData += "<br/>Alternate: <a href=\"" + relAlternate + "\">" + relAlternate + "</a>";
 				
+				AtomText summary = null;
+				
 				if (object.hasSummary()) {
-					AtomText summary = object.getSummary();
+					summary = object.getSummary();
 					String summaryValue = StringEscapeUtils.unescapeHtml(summary.getValue());
 					if (summary.getType().equals("html"))
-						previewData += "<br/>Note:<br/>" + summaryValue;
+						previewData += "<br/><br/>Note:<br/>" + summaryValue;
 					else
 						previewData += "<p>Note:<br/><i>" + summaryValue + "</i></p>";
 				}
+				else if (activityEntry.hasSummary())
+					summary = activityEntry.getSummary();
+				else {
+					summary = mPorter.getAtomFactory().text("text", "(no description)");
+					summary.setType("text");
+					summary.setValue("No description");
+				}
+				
 				webPreview.loadData(previewData, "text/html", "utf-8");		
 			}
 			else if (postItem.getType() == PostItem.TYPE_AUDIO) {
@@ -263,7 +280,7 @@ public class EntryDetail extends Activity {
 								GeneralMethods.ifHtmlRemoveMarkups(summary));
 					else
 						previewData += "\n\nNote:\n" + summaryValue;
-				}			
+				}
 				
 				previewData += "\n\n";
 				textPreview.setText(previewData);
@@ -274,11 +291,12 @@ public class EntryDetail extends Activity {
 				for (AtomLink link : links) {
 					if (link.hasRel() && link.hasHref()) {
 						if (link.getRel().equals(AtomLink.REL_ENCLOSURE))
-							relEnclosure = StringEscapeUtils.unescapeHtml(link.getHref());
+							relEnclosure = StringEscapeUtils.unescapeHtml(link.getHref()).trim();
 					}
 				}
 				// debug
-				relEnclosure = "http://dl.dropbox.com/u/4412045/Supercell%20-%20Kimi%20no%20Shiranai%20Monogatari.mp3";
+				//relEnclosure = "http://dl.dropbox.com/u/4412045/Supercell%20-%20Kimi%20no%20Shiranai%20Monogatari.mp3";
+				//relEnclosure = "http://chronicle.loc/file/view/key/ARwmwR5EAted9GpgoZ00JgDb6yiTrreq/Take%20Me%20To%20Your%20Heart.mp3";
 				if (relEnclosure != null) {
 					try {
 						mediaPlayer.setDataSource(relEnclosure);
@@ -304,6 +322,7 @@ public class EntryDetail extends Activity {
 										mediaPlayer.start();
 									}
 									catch (IOException ex) {
+										mediaPlayer.release();
 										Log.e("EntryDetail-Setting data source to media player", ex.getMessage());
 									}
 									listenButton.setText("Stop listening");

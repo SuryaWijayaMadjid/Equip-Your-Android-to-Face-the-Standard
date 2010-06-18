@@ -19,6 +19,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Toast;
 
 public class ShareLink extends Activity {
 
@@ -38,171 +39,186 @@ public class ShareLink extends Activity {
 		final Button postButton = (Button) findViewById(R.id.postOrShare_link_postButton);
 		
 		if (this.getIntent().getIntExtra(Porter.EXTRA_KEY_REQUESTCODE, 0)
-				== Porter.REQUESTCODE_EDIT_ENTRY) {
+				== Porter.REQUESTCODE_EDIT_ENTRY) {			
+			/*
+			 *  EDIT MODE
+			 */
+			
 			postButton.setText("Confirm Edit");
 			this.setTitle("Edit Link - Betavine Chronicle Client");
 			
+			// GET THE INDEX OF THE CLICKED ITEM IN THE LIST-VIEW
 			final int targetIndex = this.getIntent().getIntExtra(
 					Porter.EXTRA_KEY_TARGET_POSTITEM_INDEX, -1);
+			
 			if (mPorter.hasFeed() && mPorter.hasPostItems() && (targetIndex > -1)) {
 				final List<PostItem> postItems = mPorter.getPostItems();
 				final PostItem postItem = postItems.get(targetIndex);
 				final ActivityEntry entry = (ActivityEntry) mPorter.getEntryById(postItem.getEntryId());								
 				final ActivityObject object = entry.getObjects().get(postItem.getObjectIndex());
 				
-				if (object.hasTitle()) {
-					AtomText title = object.getTitle();
-					titleEditText.setText(StringEscapeUtils.unescapeHtml(
-							GeneralMethods.ifHtmlRemoveMarkups(title)));
-				}
-				List<AtomLink> links = object.getLinks();
-				for (AtomLink link : links) {
-					if (link.hasRel() && link.hasHref())
-						if (link.getRel().equals(AtomLink.REL_RELATED)) {
-							linkEditText.setText(link.getHref());
-							break;
-						}
-				}
-				
-				if (object.hasSummary()) {
-					AtomText summary = object.getSummary();
-					noteEditText.setText(StringEscapeUtils.unescapeHtml(
-							GeneralMethods.ifHtmlRemoveMarkups(summary)));	
-				}
+				// DISPLAY THE ORIGINAL TITLE, LINK, AND NOTE
+				titleEditText.setText(mPorter.extractTitleFromObject(object));				
+				linkEditText.setText(mPorter.extractHrefFromLinks(object.getLinks(), AtomLink.REL_RELATED));
+				noteEditText.setText(mPorter.extractSummaryFromObject(object));
 			
+				// POST-BUTTON CLICKED
 				postButton.setOnClickListener(new View.OnClickListener() {
-					
 					@Override
 					public void onClick(View v) {
-						// TODO: send edit resource request
-						String newTitle = titleEditText.getText().toString().trim();
-						String newLink = linkEditText.getText().toString().trim();
-						String newNote = noteEditText.getText().toString().trim();
+						
+						String newTitle = StringEscapeUtils.escapeHtml(titleEditText.getText()
+								.toString()).trim();
+						String newLink = StringEscapeUtils.escapeHtml(linkEditText.getText()
+								.toString()).trim();
+						String newNote = StringEscapeUtils.escapeHtml(noteEditText.getText()
+								.toString()).trim();
+						
 						if (newTitle.equals("") || newLink.equals("") || newNote.equals("")) {
-							// TODO: display alert dialog
+							showToastMessage("Please fill in the title, link, and note box.");
 							return;
 						}
-						String targetUri = null;
-						AtomLink atomLink = null;
-						List<AtomLink> links = entry.getLinks();
-						for (AtomLink link : links) {
-							if (link.hasRel() && link.hasHref()) {
-								if (link.getRel().equals(AtomLink.REL_EDIT))
-									targetUri = link.getHref();
-								else if (link.getRel().equals(AtomLink.REL_RELATED))
-									atomLink = link;
+						
+						String targetUri = mPorter.extractHrefFromLinks(object.getLinks(), AtomLink.REL_EDIT);
+						
+						if (targetUri == null) { 
+							targetUri = mPorter.extractHrefFromLinks(entry.getLinks(), AtomLink.REL_EDIT);
+							if (targetUri == null) {
+								// NO URI PROVIDED FOR THE EDIT PROCESS
+								showToastMessage("This entry is not allowed to be edited...");
+								return;
 							}
 						}
-						if (targetUri == null) {
-							// TODO: show warning to user that the entry isn't allowed to be edited
-							return;
-						}
 						
-						AtomText title = mPorter.getAtomFactory().text();
-						title.setType("text");
-						title.setValue(StringEscapeUtils.escapeHtml(newTitle));
+						AtomText title = mPorter.getAtomFactory().text("text", newTitle);
 						object.setTitle(title);
-						entry.setTitle(title);
 						
-						AtomLink objectLink = null;
-						links = object.getLinks();
+						/*  
+						 *  GET THE LINK WHICH HAS REL ATTRIBUTE WITH VALUE "RELATED"
+						 *  THAT REPRESENTS THE SHARED BOOKMARK
+						 */
+						AtomLink linkRelated = null;
+						List<AtomLink> links = object.getLinks();
 						for (AtomLink link : links) {
 							if (link.hasRel() && link.hasHref()) {
 								if (link.getRel().equals(AtomLink.REL_RELATED))
-									objectLink = link;
+									linkRelated = link;
 							}
 						}
-						if (objectLink == null) {
-							objectLink = mPorter.getAtomFactory().link();
-							objectLink.setRel(AtomLink.REL_RELATED);
-							object.addLink(objectLink);
-						}
-						objectLink.setHref(StringEscapeUtils.escapeHtml(newLink));
-						if (atomLink == null) {
-							atomLink = mPorter.getAtomFactory().link();
-							atomLink.setRel(AtomLink.REL_RELATED);
-							entry.addLink(atomLink);
-						}
-						atomLink.setHref(StringEscapeUtils.escapeHtml(newLink));
 						
-						AtomText summary = mPorter.getAtomFactory().text();
-						summary.setType("text");
-						summary.setValue(StringEscapeUtils.escapeHtml(newNote));
+						// NO LINK WITH REL VALUE OF "RELATED" FOUND
+						if (linkRelated == null) {
+							linkRelated = mPorter.getAtomFactory().link();
+							linkRelated.setRel(AtomLink.REL_RELATED);
+							object.addLink(linkRelated);
+						}
+						
+						linkRelated.setHref(newLink);
+						linkRelated.setTitle(newTitle);
+						
+						AtomText summary = mPorter.getAtomFactory().text("text", newNote);
 						object.setSummary(summary);
 						entry.setSummary(summary);
 						
-						AtomContent content = mPorter.getAtomFactory().content();
-						content.setType("html");
-						content.setValue("<a href=\"" + newLink + "\">" + newLink + "</a>");
+						AtomContent content = mPorter.getAtomFactory().content(
+								"<a href=\"" + newLink + "\">" + newLink + "</a>", "html", null);
 						entry.setContent(content);
 						object.setContent(content);
 													
-						Intent data = new Intent();
-						data.putExtra(Porter.EXTRA_KEY_TARGET_POSTITEM_INDEX, targetIndex);
-						data.putExtra(Porter.EXTRA_KEY_XML_CONVERTED_ENTRY, mActivityWriter.toXml(entry));
-						data.putExtra(Porter.EXTRA_KEY_TARGET_URI, targetUri);
-						data.putExtra(Porter.EXTRA_KEY_DIALOG_TITLE, "Editing Link");
-						setResult(Porter.RESULTCODE_EDITING_ENTRY, data);
+						setResult(Porter.RESULTCODE_EDITING_ENTRY, 
+								mPorter.prepareIntentForEditing(targetIndex, 
+										mActivityWriter.toXml(entry), targetUri, "Editing Link Entry"));
 						finish();
 					}
 				});			
 			}
 		}
 		else {
+			
+			/*
+			 *  POST MODE
+			 */
+			
+			/*
+			 *  IN CASE THIS ACTIVITY IS CALLED BY ANOTHER APPLICATION'S ACTIVITY
+			 *  
+			 *  e.g. BY "SHARE LINK" MENU OF BROWSER'S BOOKMARK
+			 *  THUS, FILL THE LINK BOX VALUE BASED ON THE BOOKMARK  
+			 */
+			linkEditText.setText(this.getIntent().getCharSequenceExtra("android.intent.extra.TEXT"));
+			
+			// POST-BUTTON CLICKED
 			postButton.setOnClickListener(new View.OnClickListener() {
-				
 				@Override
 				public void onClick(View v) {
-					String newTitle = titleEditText.getText().toString().trim();
-					String newLink = linkEditText.getText().toString().trim();
-					String newNote = noteEditText.getText().toString().trim();
+					String newTitle = StringEscapeUtils.escapeHtml(titleEditText.getText()
+							.toString()).trim();
+					String newLink = StringEscapeUtils.escapeHtml(linkEditText.getText()
+							.toString()).trim();
+					String newNote = StringEscapeUtils.escapeHtml(noteEditText.getText()
+							.toString()).trim();
+					
 					if (newTitle.equals("") || newLink.equals("") || newNote.equals("")) {
-						// TODO: display alert dialog
+						showToastMessage("Please fill in the title, link, and note box.");
 						return;
 					}
+					
 					String username = mPorter.loadPreferenceString(Porter.PREFERENCES_KEY_USERNAME, 
 							"Anonymous");
 					Date currentDateTime = Calendar.getInstance().getTime();
-					AtomLink link = mPorter.getAtomFactory().link();
-					link.setRel(AtomLink.REL_RELATED);
-					link.setHref(StringEscapeUtils.escapeHtml(newLink));
-					AtomText title = mPorter.getAtomFactory().text("text",
-							StringEscapeUtils.escapeHtml(newTitle));
-					AtomContent content = mPorter.getAtomFactory().content();
-					content.setType("html");
-					content.setValue(StringEscapeUtils.escapeHtml(
-							"<a href=\"" + newLink + "\">" + newLink + "</a>"));
+					
+					AtomText title = mPorter.getAtomFactory().text("text", newTitle);
+					
+					AtomContent content = mPorter.getAtomFactory().content(
+							"<a href=\"" + newLink + "\">" + newLink + "</a>", "html", null);	
 					
 					ActivityObject object = mPorter.constructObject(currentDateTime, title, 
 							ActivityObject.BOOKMARK, content);
-					AtomText summary = mPorter.getAtomFactory().text("text", 
-							StringEscapeUtils.escapeHtml(newNote));
-					object.setSummary(summary);
-					object.addLink(link);
 					
 					title = mPorter.getAtomFactory().text("text", 
 							username + " shared a link");
 					
 					ActivityEntry entry = mPorter.constructEntry(currentDateTime, title, 
 							content, mPorter.getActivityFactory().verb(ActivityVerb.SHARE), object);
-					entry.addLink(link);
+					
+					
+					AtomText summary = mPorter.getAtomFactory().text("text", newNote);
+					object.setSummary(summary);
 					entry.setSummary(summary);
+					
+					AtomLink link = mPorter.getAtomFactory().link(newLink, 
+							AtomLink.REL_RELATED, newTitle, null);
+					object.addLink(link);
+					entry.addLink(link);
 					
 					/*final TextView debugTextView = (TextView) findViewById(R.id.debug);
 					debugTextView.setText(mActivityWriter.toXml(entry));*/
+					
+					// INCREMENT NEXT LINK ENTRY'S ID
+					mPorter.incrementPreferenceInt(ActivityObject.BOOKMARK);
+					
+					/*
+					 *  SET AN INTENT IN ACTIVITY'S RESULT 
+					 *  AND 
+					 *  GO BACK TO UserStream ACTIVITY WITH THE RESULT
+					 */
 					Intent data = new Intent();
 					data.putExtra(Porter.EXTRA_KEY_XML_CONVERTED_ENTRY, mActivityWriter.toXml(entry));
-					data.putExtra(Porter.EXTRA_KEY_DIALOG_TITLE, "Sharing a Link");
+					data.putExtra(Porter.EXTRA_KEY_DIALOG_TITLE, "Sharing new Link");
 					if (getParent() == null) 
 						setResult(Porter.RESULTCODE_POSTING_ENTRY, data);
 					else
 						getParent().setResult(Porter.RESULTCODE_POSTING_ENTRY, data);
-					String preferenceKey = mPorter.getPreferenceKeyFromObjectType(ActivityObject.BOOKMARK);
-					mPorter.savePreferenceInt(preferenceKey, 
-							mPorter.loadPreferenceInt(preferenceKey, 0) + 1);
 					finish();
+					
+					// TODO: publish the entry directly 
+					// (if this activity was not started by UserStream activity)
 				}
-			});
+			});			
 		}
+	}
+	
+	private void showToastMessage(String message) {
+		Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
 	}
 }

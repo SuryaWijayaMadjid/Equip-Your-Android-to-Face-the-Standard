@@ -87,6 +87,10 @@ public class PostItem {
 		mObjectIndex = objectIndex;
 	}
 	
+	public void setImagePreview(Bitmap imagePreview) {
+		mImagePreview = imagePreview;
+	}
+	
 	public String getTitle() {
 		return mTitle;
 	}

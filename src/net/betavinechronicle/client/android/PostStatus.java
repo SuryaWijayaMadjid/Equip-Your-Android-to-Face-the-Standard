@@ -20,6 +20,7 @@ import android.text.format.DateFormat;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Toast;
 
 public class PostStatus extends Activity {
 
@@ -37,73 +38,67 @@ public class PostStatus extends Activity {
 		final Button postButton = (Button) findViewById(R.id.postOrShare_status_postButton);
 		
 		if (this.getIntent().getIntExtra(Porter.EXTRA_KEY_REQUESTCODE, 0) 
-				== Porter.REQUESTCODE_EDIT_ENTRY) {
+				== Porter.REQUESTCODE_EDIT_ENTRY) {			
+			/*
+			 * EDIT MODE
+			 */
+			
 			postButton.setText("Confirm Edit");
 			this.setTitle("Edit Status - Betavine Chronicle Client");
 			
+			// GET THE INDEX OF THE CLICKED ITEM IN THE LIST-VIEW
 			final int targetIndex = this.getIntent().getIntExtra(
 					Porter.EXTRA_KEY_TARGET_POSTITEM_INDEX, -1);
+			
 			if (mPorter.hasFeed() && mPorter.hasPostItems() && (targetIndex > -1)) {
 				final List<PostItem> postItems = mPorter.getPostItems();
 				final PostItem postItem = postItems.get(targetIndex);
 				final ActivityEntry entry = (ActivityEntry) mPorter.getEntryById(postItem.getEntryId());		
 				final ActivityObject object = entry.getObjects().get(postItem.getObjectIndex());			
 				
-				if (object.hasContent()) {
-					AtomContent content = object.getContent();
-					if (!content.hasSrc()) {
-						statusEditText.setText(StringEscapeUtils.unescapeHtml(
-								GeneralMethods.ifHtmlRemoveMarkups(content)));
-					}
-					else {
-						// TODO: not implemented yet :)
-					}
-				}
-				else {
-					if (object.hasTitle())
-						statusEditText.setText(StringEscapeUtils.unescapeHtml(
-								GeneralMethods.ifHtmlRemoveMarkups(object.getTitle())));
-				}
+				// DISPLAY THE ORIGINAL STATUS
+				statusEditText.setText(mPorter.extractContentFromObject(object));				
+				if (statusEditText.getText().toString().equals(""))
+					statusEditText.setText(mPorter.extractTitleFromObject(object));
 				
-				postButton.setOnClickListener(new View.OnClickListener() {
-					
+				// POST-BUTTON CLICKED
+				postButton.setOnClickListener(new View.OnClickListener() {					
 					@Override
 					public void onClick(View v) {
-						String newStatus = statusEditText.getText().toString().trim();
+						String newStatus = StringEscapeUtils.escapeHtml(statusEditText.getText()
+								.toString()).trim();
+						
 						if (newStatus.equals("")) {
-							// TODO: display alert dialog
+							showToastMessage("Please fill in the status box.");
 							return;
 						}
 						
-						String targetUri = null;
-						List<AtomLink> links = entry.getLinks();
-						for (AtomLink link : links) {
-							if (link.hasRel() && link.hasHref())
-								if (link.getRel().equals(AtomLink.REL_EDIT))
-									targetUri = StringEscapeUtils.unescapeHtml(link.getHref());
-						}
-						if (targetUri == null) {
-							// TODO: show warning to user that the entry isn't allowed to be edited
-							return;
+						String targetUri = mPorter.extractHrefFromLinks(object.getLinks(), AtomLink.REL_EDIT);
+						
+						if (targetUri == null) { 
+							targetUri = mPorter.extractHrefFromLinks(entry.getLinks(), AtomLink.REL_EDIT);
+							if (targetUri == null) {
+								// NO URI PROVIDED FOR THE EDIT PROCESS
+								showToastMessage("This entry is not allowed to be edited...");
+								return;
+							}
 						}
 						
-						AtomContent content = mPorter.getAtomFactory().content();
-						content.setType("text");
-						content.setValue(StringEscapeUtils.escapeHtml(newStatus));
+						AtomContent content = mPorter.getAtomFactory().content(
+								newStatus, "text", null);
 						entry.setContent(content);
-						// TODO: updated?
-						/*Date currentDateTime = Calendar.getInstance().getTime();
+						object.setContent(content);
+						
+						Date currentDateTime = Calendar.getInstance().getTime();
 						object.setUpdated(currentDateTime);
-						entry.setUpdated(currentDateTime);	*/
+						entry.setUpdated(currentDateTime);	
 						
 						/*final TextView debugTextView = (TextView) findViewById(R.id.debug);
 						debugTextView.setText(mActivityWriter.toXml(entry));*/
-						Intent data = new Intent();
-						data.putExtra(Porter.EXTRA_KEY_TARGET_POSTITEM_INDEX, targetIndex);
-						data.putExtra(Porter.EXTRA_KEY_XML_CONVERTED_ENTRY, mActivityWriter.toXml(entry));
-						data.putExtra(Porter.EXTRA_KEY_TARGET_URI, targetUri);
-						data.putExtra(Porter.EXTRA_KEY_DIALOG_TITLE, "Editing Status");
-						setResult(Porter.RESULTCODE_EDITING_ENTRY, data);
+						
+						setResult(Porter.RESULTCODE_EDITING_ENTRY,
+								mPorter.prepareIntentForEditing(targetIndex, 
+										mActivityWriter.toXml(entry), targetUri, "Editing Status Entry"));
 						finish();
 						// TODO: if editing failed then the entry should be rolled back
 					}
@@ -111,25 +106,34 @@ public class PostStatus extends Activity {
 			}
 		}
 		else {
+			
+			/*
+			 * POST MODE
+			 */
+			
+			// POST-BUTTON CLICKED
 			postButton.setOnClickListener(new View.OnClickListener() {
-				
 				@Override
 				public void onClick(View v) {
-					String newStatus = statusEditText.getText().toString().trim();
+					String newStatus = StringEscapeUtils.escapeHtml(statusEditText.getText()
+							.toString()).trim();
+					
 					if (newStatus.equals("")) {
-						// TODO: display alert dialog
+						showToastMessage("Please fill in the status box.");
 						return;
 					}
+					
 					String username = mPorter.loadPreferenceString(Porter.PREFERENCES_KEY_USERNAME, 
-							"Anonymous");
+							"Anonymous");					
 					Date currentDateTime = Calendar.getInstance().getTime();
+					
 					AtomText title = mPorter.getAtomFactory().text("text", 
 							"Status update on " + DateFormat.getMediumDateFormat(
 									getApplicationContext()).format(currentDateTime)
 									);
-					AtomContent content = mPorter.getAtomFactory().content();
-					content.setType("text");
-					content.setValue(StringEscapeUtils.escapeHtml(newStatus));
+					
+					AtomContent content = mPorter.getAtomFactory().content(
+							newStatus, "text", null);
 					
 					ActivityObject object = mPorter.constructObject(currentDateTime, title, 
 							ActivityObject.STATUS, content);
@@ -142,19 +146,29 @@ public class PostStatus extends Activity {
 					
 					/*final TextView debugTextView = (TextView) findViewById(R.id.debug);
 					debugTextView.setText(mActivityWriter.toXml(entry));*/
+					
+					// INCREMENT NEXT STATUS ENTRY'S ID
+					mPorter.incrementPreferenceInt(ActivityObject.STATUS);
+					
+					/*
+					 *  SET AN INTENT IN ACTIVITY'S RESULT 
+					 *  AND 
+					 *  GO BACK TO UserStream ACTIVITY WITH THE RESULT
+					 */
 					Intent data = new Intent();
 					data.putExtra(Porter.EXTRA_KEY_XML_CONVERTED_ENTRY, mActivityWriter.toXml(entry));
-					data.putExtra(Porter.EXTRA_KEY_DIALOG_TITLE, "Posting New Status");
+					data.putExtra(Porter.EXTRA_KEY_DIALOG_TITLE, "Posting new Status");					
 					if (getParent() == null) 
 						setResult(Porter.RESULTCODE_POSTING_ENTRY, data);
 					else
 						getParent().setResult(Porter.RESULTCODE_POSTING_ENTRY, data);
-					String preferenceKey = mPorter.getPreferenceKeyFromObjectType(ActivityObject.STATUS);
-					mPorter.savePreferenceInt(preferenceKey, 
-							mPorter.loadPreferenceInt(preferenceKey, 0) + 1);
 					finish();
 				}
 			});
 		}
+	}
+	
+	private void showToastMessage(String message) {
+		Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
 	}
 }

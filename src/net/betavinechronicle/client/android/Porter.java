@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import org.apache.commons.lang.StringEscapeUtils;
 import org.onesocialweb.model.activity.ActivityEntry;
 import org.onesocialweb.model.activity.ActivityFactory;
 import org.onesocialweb.model.activity.ActivityObject;
@@ -14,12 +15,15 @@ import org.onesocialweb.model.atom.AtomContent;
 import org.onesocialweb.model.atom.AtomEntry;
 import org.onesocialweb.model.atom.AtomFactory;
 import org.onesocialweb.model.atom.AtomFeed;
+import org.onesocialweb.model.atom.AtomLink;
 import org.onesocialweb.model.atom.AtomPerson;
 import org.onesocialweb.model.atom.AtomText;
 import org.onesocialweb.model.atom.DefaultAtomFactory;
 
 import android.app.Application;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
 
 public class Porter extends Application {
 	
@@ -29,6 +33,7 @@ public class Porter extends Application {
 	static final int RESULTCODE_DELETING_ENTRY = 96;
 	static final int RESULTCODE_EDITING_ENTRY = 95;
 	static final int RESULTCODE_POSTING_ENTRY = 94;
+	static final int RESULTCODE_POSTING_ENTRY_WITH_MEDIA = 93;
 	
 	static final int REQUESTCODE_VIEW_ENTRY = 79;
 	static final int REQUESTCODE_EDIT_ENTRY = 78;
@@ -42,16 +47,11 @@ public class Porter extends Application {
 	static final String EXTRA_KEY_XML_CONVERTED_ENTRY = "xml-converted-entry";
 	static final String EXTRA_KEY_DIALOG_TITLE = "dialog-title";
 	static final String EXTRA_KEY_TARGET_URI = "target-uri";
+	static final String EXTRA_KEY_MEDIA_TYPE = "media-type";
 	
 	static final String PREFERENCES_NAME = "AMC-preferences";
 	static final String PREFERENCES_KEY_USERNAME = "username";
 	static final String PREFERENCES_KEY_POST_COUNT = "post-count";
-	static final String PREFERENCES_KEY_OBJECT_STATUS = "object-status";
-	static final String PREFERENCES_KEY_OBJECT_LINK = "object-link";
-	static final String PREFERENCES_KEY_OBJECT_BLOG = "object-blog";
-	static final String PREFERENCES_KEY_OBJECT_PICTURE = "object-picture";
-	static final String PREFERENCES_KEY_OBJECT_AUDIO = "object-audio";
-	static final String PREFERENCES_KEY_OBJECT_VIDEO = "object-video";
 
 	private AtomFeed mFeed;
 	private List<PostItem> mPostItems;
@@ -64,7 +64,19 @@ public class Porter extends Application {
 		for (AtomEntry entry : entries) {
 			if (entry.getId().equals(id)) return entry;
 		}
+		
 		return null;
+	}
+	
+	public void replaceEntry(AtomEntry newEntry, String oldEntryId) {
+		List<AtomEntry> entries = mFeed.getEntries();
+		int count = 0;
+		for (AtomEntry entry : entries) {
+			if (entry.getId().equals(oldEntryId)) break;
+			count++;
+		}
+		mFeed.getEntries().remove(count);
+		mFeed.getEntries().add(count, newEntry);
 	}
 	
 	public ActivityFactory getActivityFactory() {
@@ -114,6 +126,14 @@ public class Porter extends Application {
 		prefsEditor.commit();
 	}
 	
+	public void incrementPreferenceInt(String key) {
+		SharedPreferences prefs = this.getSharedPreferences(PREFERENCES_NAME, MODE_PRIVATE);
+		SharedPreferences.Editor prefsEditor = prefs.edit();
+		int value = prefs.getInt(key, 0);
+		prefsEditor.putInt(key, value);
+		prefsEditor.commit();
+	}
+	
 	public void savePreferenceString(String key, String value) {
 		SharedPreferences prefs = this.getSharedPreferences(PREFERENCES_NAME, MODE_PRIVATE);
 		SharedPreferences.Editor prefsEditor = prefs.edit();
@@ -124,12 +144,14 @@ public class Porter extends Application {
 	public int loadPreferenceInt(String key, int defaultValue) {
 		SharedPreferences prefs = this.getSharedPreferences(PREFERENCES_NAME, MODE_PRIVATE);
 		int value = prefs.getInt(key, defaultValue);
+		
 		return value;
 	}
 	
 	public String loadPreferenceString(String key, String defaultValue) {
 		SharedPreferences prefs = this.getSharedPreferences(PREFERENCES_NAME, MODE_PRIVATE);
 		String value = prefs.getString(key, defaultValue);
+		
 		return value;
 	}
 	
@@ -165,11 +187,10 @@ public class Porter extends Application {
 		ActivityObject object = mActivityFactory.object(objectType);
 		SharedPreferences prefs = this.getSharedPreferences(PREFERENCES_NAME, MODE_PRIVATE);
 		
-		String preferenceKey = this.getPreferenceKeyFromObjectType(objectType);
-		int typeCount = prefs.getInt(preferenceKey, 0) + 1; 
+		int typeCount = prefs.getInt(objectType, 0) + 1; 
 		object.setId("tag:net.betavinechronicle.client.android,"
 				+ (new SimpleDateFormat("yyyy-MM-dd")).format(currentDateTime)
-				+ ":/" + preferenceKey + "/" + typeCount);
+				+ ":/" + objectType + "/" + typeCount);
 		object.setTitle(title);
 		object.setUpdated(currentDateTime);
 		object.setContent(content);
@@ -177,15 +198,70 @@ public class Porter extends Application {
 		return object;
 	}
 	
-	public String getPreferenceKeyFromObjectType(String objectType) {
-		String preferenceKey = "unknown";
-		if (objectType.equals(ActivityObject.STATUS)) preferenceKey = PREFERENCES_KEY_OBJECT_STATUS;
-		else if (objectType.equals(ActivityObject.BOOKMARK)) preferenceKey = PREFERENCES_KEY_OBJECT_LINK;
-		else if (objectType.equals(ActivityObject.ARTICLE)) preferenceKey = PREFERENCES_KEY_OBJECT_BLOG;
-		else if (objectType.equals(ActivityObject.PHOTO)) preferenceKey = PREFERENCES_KEY_OBJECT_PICTURE;
-		else if (objectType.equals(ActivityObject.AUDIO)) preferenceKey = PREFERENCES_KEY_OBJECT_AUDIO;
-		else if (objectType.equals(ActivityObject.VIDEO)) preferenceKey = PREFERENCES_KEY_OBJECT_VIDEO;
-		return preferenceKey;
-	}
-	
+    public Bitmap generateImagePreview(ActivityObject object) {
+    	Bitmap imagePreview = null;
+    	if (object.getType().equals(ActivityObject.PHOTO)) {
+    		List<AtomLink> links = object.getLinks();
+			for (AtomLink link : links) {
+				if (link.hasRel() && link.hasHref()) {
+					if (link.getRel().equals(AtomLink.REL_PREVIEW)) {
+						imagePreview = GeneralMethods.getImageBitmapFromUrlString(link.getHref());
+						break;
+					}
+				}
+			}
+    	}  
+    	
+    	return imagePreview;
+    }
+    
+    public Intent prepareIntentForEditing(int targetIndex, String xmlEntry, 
+    		String targetUri, String dialogTitle) {
+    	Intent intent = new Intent();
+    	
+    	intent.putExtra(Porter.EXTRA_KEY_TARGET_POSTITEM_INDEX, targetIndex);
+    	intent.putExtra(Porter.EXTRA_KEY_XML_CONVERTED_ENTRY, xmlEntry);
+    	intent.putExtra(Porter.EXTRA_KEY_TARGET_URI, targetUri);
+    	intent.putExtra(Porter.EXTRA_KEY_DIALOG_TITLE, dialogTitle);
+    	
+    	return intent;
+    }
+    
+    public String extractTitleFromObject(ActivityObject object) {
+    	if (object.hasTitle())
+			return StringEscapeUtils.unescapeHtml(GeneralMethods.ifHtmlRemoveMarkups(object.getTitle()));
+    	
+    	return null;
+    }
+    
+    public String extractContentFromObject(ActivityObject object) {
+    	if (object.hasContent()) {
+    		AtomContent content = object.getContent();
+    		if (content.hasSrc()) return null;
+			if (!content.getType().equals("text") && !content.getType().equals("html")
+					&& !content.getType().equals("xhtml")) return null;
+    		return StringEscapeUtils.unescapeHtml(GeneralMethods.ifHtmlRemoveMarkups(object.getContent()));
+    	}
+    	
+    	return null;
+    }
+    
+    public String extractSummaryFromObject(ActivityObject object) {
+    	if (object.hasSummary())
+			return StringEscapeUtils.unescapeHtml(GeneralMethods.ifHtmlRemoveMarkups(object.getSummary()));
+	    	
+	    return null;
+    }
+    
+    public String extractHrefFromLinks(List<AtomLink> links, String linkRelValue) {
+    	String href = null;
+    	
+    	for (AtomLink link : links) {
+			if (link.hasRel() && link.hasHref())
+				if (link.getRel().equals(linkRelValue))
+					return StringEscapeUtils.unescapeHtml(link.getHref());
+		}
+		
+    	return href;
+    }
 }

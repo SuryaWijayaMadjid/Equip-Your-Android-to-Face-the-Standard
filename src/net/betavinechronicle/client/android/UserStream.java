@@ -21,7 +21,6 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
-import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.ContextMenu;
@@ -225,19 +224,7 @@ public class UserStream extends ListActivity {
 			break;
     	
     	case Porter.RESULTCODE_EDITING_ENTRY:
-    		/*PostItem postItem = mPostItems.get(targetIndex);
-    		AtomEntry atomEntry = mPorter.getEntryById(postItem.getEntryId());
-    		if (atomEntry instanceof ActivityEntry) {
-    			postItem.setContent(this.generateContent(
-    					((ActivityEntry) atomEntry).getObjects().get(postItem.getObjectIndex()))
-    					);
-    		}
-    		else {
-    			postItem.setContent(this.generateContent(atomEntry));
-    		}
-    		this.mPostItemAdapter.notifyDataSetChanged();
-    		this.setSelection(targetIndex);*/
-    		if (postItemIndex < 0) break;
+    		if (postItemIndex < -1) break;
     		mProgressDialog = ProgressDialog.show(this, 
     				data.getCharSequenceExtra(Porter.EXTRA_KEY_DIALOG_TITLE), 
     				"Please wait...");
@@ -285,7 +272,7 @@ public class UserStream extends ListActivity {
     			Log.d("INSIDE deleteEntry()", "Finished executing DELETE request");
     			if (this.hasHttpResponse()) {
     				int statusCode = this.getHttpResponse().getStatusLine().getStatusCode();
-    				Log.d("INSIDE deleteEntry()", "Has HttpResponse, Status Code:" + this.getHttpResponse().getStatusLine().getStatusCode());
+    				Log.d("INSIDE deleteEntry()", "Has HttpResponse, Status Code:" + statusCode);
     				if (statusCode != 200)
     					return;
     				mProgDialogTitle = "Updating Stream";
@@ -324,7 +311,7 @@ public class UserStream extends ListActivity {
     			Log.d("INSIDE editEntry()", "Finished executing PUT request");
     			if (this.hasHttpResponse()) {
     				int statusCode = this.getHttpResponse().getStatusLine().getStatusCode();
-    				Log.d("INSIDE editEntry()", "Has HttpResponse, Status Code:" + this.getHttpResponse().getStatusLine().getStatusCode());
+    				Log.d("INSIDE editEntry()", "Has HttpResponse, Status Code:" + statusCode);
     				if (statusCode != 200)
     					return;
     				AtomEntry atomEntry = null;
@@ -352,20 +339,80 @@ public class UserStream extends ListActivity {
 			        if (atomEntry != null) {
 			        	mProgDialogTitle = "Updating Stream";
 			        	runOnUiThread(mChangeProgDialogTitle);
-		        		final PostItem postItem = mPostItems.get(postItemIndex);
-		        		AtomEntry originalEntry = mPorter.getEntryById(postItem.getEntryId());
-		        		originalEntry = atomEntry;
-		        		postItem.setTitle(generateTitle(originalEntry));
-		        		// make the content of the post-item to be displayed
-		        		if (atomEntry instanceof ActivityEntry) {
-		        			postItem.setContent(generateContent(
-		        					((ActivityEntry) originalEntry).getObjects().get(
-		        							postItem.getObjectIndex()))
-		        					);
-		        		}
-		        		else { // The entry is a regular atom-entry        			
-		        			postItem.setContent(generateContent(originalEntry));
-		        		} 
+			        	if (postItemIndex == -1) {
+			        		String titleToDisplay = "";
+			        		int sourceToDisplay = PostItem.SOURCE_STORYTLR;
+			        		int typeToDisplay = PostItem.NOT_SPECIFIED;
+			        		mPorter.getFeed().addEntry(atomEntry);
+			        		titleToDisplay = generateTitle(atomEntry);
+			        		
+			        		// make the content of the post-item to be displayed
+			        		if (atomEntry instanceof ActivityEntry) { 
+			        			// each object will represent a post-item
+			        			ActivityEntry activityEntry = (ActivityEntry) atomEntry;
+			        			List<ActivityObject> objects = activityEntry.getObjects();
+			        			int objectCount = 0;
+			        			for (ActivityObject object : objects) {
+			        				typeToDisplay = PostItem.getTypeByObjectType(object.getType());
+			        				mPostItems.add(0, new PostItem(
+					        				titleToDisplay,
+					        				generateContent(object),
+					        				mPorter.generateImagePreview(object),
+					        				sourceToDisplay,
+					        				typeToDisplay,
+					        				activityEntry.getId(),
+					        				objectCount));
+			        				runOnUiThread(new Runnable() {
+							    		@Override
+							    		public void run() {
+							    			mPostItemAdapter.insert(mPostItems.get(0), 0);
+							    		}		
+							    	});
+			        				objectCount++;
+			        			}
+			        		}
+			        		else { // The entry is a regular atom-entry        			
+			        			mPostItems.add(0, new PostItem(
+				        				titleToDisplay,
+				        				generateContent(atomEntry),
+				        				null,
+				        				sourceToDisplay,
+				        				typeToDisplay,
+				        				atomEntry.getId(),
+				        				-1));
+			        			runOnUiThread(new Runnable() {
+						    		@Override
+						    		public void run() {
+						    			mPostItemAdapter.insert(mPostItems.get(0), 0);
+						    		}		
+						    	});
+			        		} 
+			        		runOnUiThread(mRefreshAdapter);
+			        		runOnUiThread(new Runnable() {
+					    		@Override
+					    		public void run() {
+					        		setSelection(0);
+					    		}		
+					    	});
+			        	}
+			        	else {
+			        		final PostItem postItem = mPostItems.get(postItemIndex);
+			        		mPorter.replaceEntry(atomEntry, postItem.getEntryId());
+			        		postItem.setTitle(generateTitle(atomEntry));
+			        		// make the content of the post-item to be displayed
+			        		if (atomEntry instanceof ActivityEntry) {
+			        			ActivityEntry activityEntry = (ActivityEntry) atomEntry;
+			        			ActivityObject object = activityEntry.getObjects().get(postItem.getObjectIndex()); 
+			        			postItem.setImagePreview(mPorter.generateImagePreview(object));
+			        			postItem.setContent(generateContent(object));
+			        			postItem.setSource(PostItem.SOURCE_STORYTLR);
+			        			
+			        		}
+			        		else { // The entry is a regular atom-entry        			
+			        			postItem.setContent(generateContent(atomEntry));
+			        			postItem.setSource(PostItem.SOURCE_STORYTLR);
+			        		} 
+			        	}
 		        		
 		        		runOnUiThread(mRefreshAdapter);
 			        }
@@ -403,7 +450,7 @@ public class UserStream extends ListActivity {
     			Log.d("INSIDE postEntry()", "Finished executing POST request");
     			if (this.hasHttpResponse()) {
     				int statusCode = this.getHttpResponse().getStatusLine().getStatusCode();
-    				Log.d("INSIDE postEntry()", "Has HttpResponse, Status Code:" + this.getHttpResponse().getStatusLine().getStatusCode());
+    				Log.d("INSIDE postEntry()", "Has HttpResponse, Status Code:" + statusCode);
     				if (statusCode != 200 && statusCode != 201)
     					return;
     				AtomEntry atomEntry = null;
@@ -448,7 +495,7 @@ public class UserStream extends ListActivity {
 		        				mPostItems.add(0, new PostItem(
 				        				titleToDisplay,
 				        				generateContent(object),
-				        				generateImagePreview(object),
+				        				mPorter.generateImagePreview(object),
 				        				sourceToDisplay,
 				        				typeToDisplay,
 				        				activityEntry.getId(),
@@ -587,7 +634,7 @@ public class UserStream extends ListActivity {
 			        				mPostItems.add(new PostItem(
 					        				titleToDisplay,
 					        				generateContent(object),
-					        				generateImagePreview(object),
+					        				mPorter.generateImagePreview(object),
 					        				sourceToDisplay,
 					        				typeToDisplay,
 					        				activityEntry.getId(),
@@ -668,7 +715,7 @@ public class UserStream extends ListActivity {
     		titleToDisplay = GeneralMethods.ifHtmlRemoveMarkups(atomEntry.getTitle());
     		titleToDisplay = GeneralMethods.getShortVersionString(titleToDisplay, mMaxTitleLength);
     	}
-    	return (titleToDisplay == null)? "":titleToDisplay;
+    	return (titleToDisplay == null)? "(untitled)":titleToDisplay;
     }
     
     private String generateContent(AtomEntry atomEntry) {
@@ -743,23 +790,6 @@ public class UserStream extends ListActivity {
     	if (contentToDisplay != null)
     		contentToDisplay = GeneralMethods.getShortVersionString(contentToDisplay, mMaxContentLength);
     	return contentToDisplay;
-    }
-    
-    private Bitmap generateImagePreview(ActivityObject object) {
-    	Bitmap imagePreview = null;
-    	if (object.getType().equals(ActivityObject.PHOTO)) {
-    		List<AtomLink> links = object.getLinks();
-			for (AtomLink link : links) {
-				if (link.hasRel() && link.hasHref()) {
-					if (link.getRel().equals(AtomLink.REL_PREVIEW)) {
-						imagePreview = GeneralMethods.getImageBitmapFromUrlString(link.getHref());
-						break;
-					}
-				}
-			}
-    	}
-    	
-    	return imagePreview;
     }
     
     //change the progress dialog's title
