@@ -14,18 +14,19 @@ import org.onesocialweb.model.atom.AtomText;
 import org.onesocialweb.xml.writer.ActivityXmlWriter;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.format.DateFormat;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.Toast;
 
 public class PostStatus extends Activity {
 
 	private Porter mPorter;
 	private ActivityXmlWriter mActivityWriter;	
+	private String mAlertMessage = "";
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -69,7 +70,8 @@ public class PostStatus extends Activity {
 								.toString()).trim();
 						
 						if (newStatus.equals("")) {
-							showToastMessage("Please fill in the status box.");
+							mAlertMessage = "Please fill in the status box.";
+							displayAlert.run();
 							return;
 						}
 						
@@ -79,28 +81,36 @@ public class PostStatus extends Activity {
 							targetUri = mPorter.extractHrefFromLinks(entry.getLinks(), AtomLink.REL_EDIT);
 							if (targetUri == null) {
 								// NO URI PROVIDED FOR THE EDIT PROCESS
-								showToastMessage("This entry is not allowed to be edited...");
+								mAlertMessage = "This entry is not allowed to be edited...";
+								displayAlert.run();
 								return;
 							}
 						}
 						
 						AtomContent content = mPorter.getAtomFactory().content(
 								newStatus, "text", null);
+						AtomContent oldEntryContent = entry.getContent();
+						AtomContent oldObjectContent = object.getContent();
 						entry.setContent(content);
 						object.setContent(content);
 						
 						Date currentDateTime = Calendar.getInstance().getTime();
+						Date oldEntryUpdated = entry.getUpdated();
+						Date oldObjectUpdated = object.getUpdated();
 						object.setUpdated(currentDateTime);
 						entry.setUpdated(currentDateTime);	
-						
-						/*final TextView debugTextView = (TextView) findViewById(R.id.debug);
-						debugTextView.setText(mActivityWriter.toXml(entry));*/
 						
 						setResult(Porter.RESULTCODE_EDITING_ENTRY,
 								mPorter.prepareIntentForEditing(targetIndex, 
 										mActivityWriter.toXml(entry), targetUri, "Editing Status Entry"));
+						
+						// ROLL BACK THE CHANGES (JUST IN CASE THE EDIT IS NOT SUCCESSFULL)
+						entry.setContent(oldEntryContent);
+						object.setContent(oldObjectContent);
+						entry.setUpdated(oldEntryUpdated);
+						object.setUpdated(oldObjectUpdated);	
+						
 						finish();
-						// TODO: if editing failed then the entry should be rolled back
 					}
 				});
 			}
@@ -119,7 +129,8 @@ public class PostStatus extends Activity {
 							.toString()).trim();
 					
 					if (newStatus.equals("")) {
-						showToastMessage("Please fill in the status box.");
+						mAlertMessage = "Please fill in the status box.";
+						displayAlert.run();
 						return;
 					}
 					
@@ -167,8 +178,18 @@ public class PostStatus extends Activity {
 			});
 		}
 	}
-	
-	private void showToastMessage(String message) {
-		Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
-	}
+    
+    private Runnable displayAlert = new Runnable() {
+
+		@Override
+		public void run() {
+			new AlertDialog.Builder(PostStatus.this)
+			.setTitle("Posting new Status")
+			.setMessage(mAlertMessage)
+			.setCancelable(true)
+			.setPositiveButton("OK", null)
+			.show();
+		}
+    	
+    };
 }

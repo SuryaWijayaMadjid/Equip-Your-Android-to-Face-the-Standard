@@ -1,5 +1,7 @@
 package net.betavinechronicle.client.android;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -19,6 +21,9 @@ import org.onesocialweb.model.atom.AtomLink;
 import org.onesocialweb.model.atom.AtomPerson;
 import org.onesocialweb.model.atom.AtomText;
 import org.onesocialweb.model.atom.DefaultAtomFactory;
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+import org.xmlpull.v1.XmlPullParserFactory;
 
 import android.app.Application;
 import android.content.Intent;
@@ -28,7 +33,7 @@ import android.graphics.Bitmap;
 public class Porter extends Application {
 	
 	static final int RESULTCODE_SUBACTIVITY_CHAINCLOSE = 99;
-	static final int RESULTCODE_SWITCH_ACTIVITY_TO_PROFILE = 98;
+	static final int RESULTCODE_SWITCH_ACTIVITY_TO_SETTINGS = 98;
 	static final int RESULTCODE_SWITCH_ACTIVITY_TO_POST_OR_SHARE = 97;
 	static final int RESULTCODE_DELETING_ENTRY = 96;
 	static final int RESULTCODE_EDITING_ENTRY = 95;
@@ -39,8 +44,7 @@ public class Porter extends Application {
 	static final int REQUESTCODE_EDIT_ENTRY = 78;
 	static final int REQUESTCODE_DELETE_ENTRY = 77;
 	static final int REQUESTCODE_POST_OR_SHARE = 76;
-	static final int REQUESTCODE_EDIT_PROFILE = 75;
-	static final int REQUESTCODE_PROMPT_USERNAME = 74;
+	static final int REQUESTCODE_CONFIGURE_SETTINGS = 75;
 	
 	static final String EXTRA_KEY_REQUESTCODE = "request-code";
 	static final String EXTRA_KEY_TARGET_POSTITEM_INDEX = "alter-postitem-index";
@@ -51,6 +55,11 @@ public class Porter extends Application {
 	
 	static final String PREFERENCES_NAME = "AMC-preferences";
 	static final String PREFERENCES_KEY_USERNAME = "username";
+	static final String PREFERENCES_KEY_PASSWORD = "password";
+	static final String PREFERENCES_KEY_ENDPOINT = "endpoint";
+	static final String PREFERENCES_KEY_MAX_ENTRIES = "max-entries";
+	static final String PREFERENCES_KEY_MAX_CHARS_TITLE = "max-chars-title";
+	static final String PREFERENCES_KEY_MAX_CHARS_CONTENT = "max-chars-content";
 	static final String PREFERENCES_KEY_POST_COUNT = "post-count";
 
 	private AtomFeed mFeed;
@@ -58,6 +67,10 @@ public class Porter extends Application {
 	private boolean mIsRefreshNeeded = false;
 	private ActivityFactory mActivityFactory = new DefaultActivityFactory();
 	private AtomFactory mAtomFactory = new DefaultAtomFactory();
+	
+	public String getAppName() {
+		return getString(R.string.app_name);
+	}
 	
 	public AtomEntry getEntryById(String id) {
 		List<AtomEntry> entries = mFeed.getEntries();
@@ -119,11 +132,30 @@ public class Porter extends Application {
 		return (mPostItems != null);
 	}
 	
+	public boolean isPreferenceSet() {
+		SharedPreferences prefs = this.getSharedPreferences(PREFERENCES_NAME, MODE_PRIVATE);
+		return (prefs.getString(Porter.PREFERENCES_KEY_USERNAME, "").equals(""))? false:true;
+	}
+	
+	public void resetPreferences() {
+		SharedPreferences prefs = this.getSharedPreferences(PREFERENCES_NAME, MODE_PRIVATE);
+		SharedPreferences.Editor prefsEditor = prefs.edit();
+		prefsEditor.clear();
+		prefsEditor.commit();
+	}
+	
 	public void savePreferenceInt(String key, int value) {
 		SharedPreferences prefs = this.getSharedPreferences(PREFERENCES_NAME, MODE_PRIVATE);
 		SharedPreferences.Editor prefsEditor = prefs.edit();
 		prefsEditor.putInt(key, value);
 		prefsEditor.commit();
+	}
+	
+	public int loadPreferenceInt(String key, int defaultValue) {
+		SharedPreferences prefs = this.getSharedPreferences(PREFERENCES_NAME, MODE_PRIVATE);
+		int value = prefs.getInt(key, defaultValue);
+		
+		return value;
 	}
 	
 	public void incrementPreferenceInt(String key) {
@@ -139,13 +171,6 @@ public class Porter extends Application {
 		SharedPreferences.Editor prefsEditor = prefs.edit();
 		prefsEditor.putString(key, value);
 		prefsEditor.commit();
-	}
-	
-	public int loadPreferenceInt(String key, int defaultValue) {
-		SharedPreferences prefs = this.getSharedPreferences(PREFERENCES_NAME, MODE_PRIVATE);
-		int value = prefs.getInt(key, defaultValue);
-		
-		return value;
 	}
 	
 	public String loadPreferenceString(String key, String defaultValue) {
@@ -215,7 +240,7 @@ public class Porter extends Application {
     	return imagePreview;
     }
     
-    public Intent prepareIntentForEditing(int targetIndex, String xmlEntry, 
+    public Intent prepareIntentForEditing(int targetIndex, String xmlEntry,
     		String targetUri, String dialogTitle) {
     	Intent intent = new Intent();
     	
@@ -225,6 +250,15 @@ public class Porter extends Application {
     	intent.putExtra(Porter.EXTRA_KEY_DIALOG_TITLE, dialogTitle);
     	
     	return intent;
+    }
+    
+    public XmlPullParser prepareXppWithInputStream(InputStream inputStream) throws XmlPullParserException, IOException {
+    	XmlPullParserFactory xppFactory = XmlPullParserFactory.newInstance();
+    	xppFactory.setNamespaceAware(true);
+    	XmlPullParser xpp = xppFactory.newPullParser();
+    	xpp.setInput(inputStream, "UTF-8");
+    	xpp.next();
+    	return xpp;
     }
     
     public String extractTitleFromObject(ActivityObject object) {
@@ -256,12 +290,21 @@ public class Porter extends Application {
     public String extractHrefFromLinks(List<AtomLink> links, String linkRelValue) {
     	String href = null;
     	
-    	for (AtomLink link : links) {
+    	for (AtomLink link : links) 
 			if (link.hasRel() && link.hasHref())
 				if (link.getRel().equals(linkRelValue))
 					return StringEscapeUtils.unescapeHtml(link.getHref());
-		}
 		
     	return href;
+    }
+    
+    public AtomLink getLinkByRelValue(List<AtomLink> links, String linkRelValue) {
+    	
+    	for (AtomLink link : links) 
+    		if (link.hasRel() && link.hasHref())
+				if (link.getRel().equals(linkRelValue))
+					return link;
+    	
+    	return null;
     }
 }

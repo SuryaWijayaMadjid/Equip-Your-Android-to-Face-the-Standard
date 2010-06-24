@@ -1,18 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Betavine Chronicle Android Client</string>
-	
-	<!-- Maximum number of first entries to be shown in the stream -->
-    <string name="max_entries">10</string>
-    
-    <!-- Maximum number of first characters of title to be displayed in brief display -->
-    <string name="max_char_title">50</string>
-    
-    <!-- Maximum number of first characters of content to be displayed in brief display -->
-    <string name="max_char_content">85</string>
-    
-    <!-- The end-point where the request of feeds will be sent to -->
-    <string name="service_endpoint_uri">http://chronicle.loc/api/activities</string>
+    <string name="app_name">AMC-BC/v.1.0</string>
     
     <string name="debugging_endpoint_uri">http://dl.dropbox.com/u/4412045/atom-activity-betavine-chronicle.xml</string>
     

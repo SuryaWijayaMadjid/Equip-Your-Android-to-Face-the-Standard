@@ -16,59 +16,41 @@ public class PostOrShare extends TabActivity {
 		super.onCreate(savedInstanceState);
 		this.setContentView(R.layout.post_or_share_tabhost);
 		
-		//Resources resources = this.getResources(); // Resources object to get Drawables
-		TabHost tabHost = this.getTabHost(); // The activity TabHost
-		TabHost.TabSpec tabSpec; // Reusable TabSpec for each tab
-		Intent intent; // Reusable Intent for each tab
+		TabHost tabHost = this.getTabHost();
+		TabHost.TabSpec tabSpec = null; 
+		Intent intent = null;
 		
-		// Add Post Status tab to the tab host
+		// ADD PostStatus TO THE TAB-HOST
 		intent = new Intent().setClass(getApplicationContext(), 
 				net.betavinechronicle.client.android.PostStatus.class);		
-		/*tabSpec = tabHost.newTabSpec("postOrShare_status").setIndicator(
-				getLayoutInflater().inflate(R.layout.tab_indicator, null)).setContent(intent);*/
 		tabSpec = tabHost.newTabSpec("postOrShare_status").setIndicator("Status").setContent(intent);
 		tabHost.addTab(tabSpec);
 		
-		// Add Post Blog tab to the tab host
+		// ADD PostBlog TO THE TAB-HOST
 		intent = new Intent().setClass(getApplicationContext(), 
 				net.betavinechronicle.client.android.PostBlog.class);		
-		/*tabSpec = tabHost.newTabSpec("postOrShare_blog").setIndicator(
-				getLayoutInflater().inflate(R.layout.tab_indicator, null)).setContent(intent);*/
 		tabSpec = tabHost.newTabSpec("postOrShare_status").setIndicator("Blog").setContent(intent);
 		tabHost.addTab(tabSpec);
 		
-		// Add Share Link tab to the tab host
+		// ADD ShareLink TO THE TAB-HOST
 		intent = new Intent().setClass(getApplicationContext(), 
 				net.betavinechronicle.client.android.ShareLink.class);		
-		/*tabSpec = tabHost.newTabSpec("postOrShare_link").setIndicator(
-				getLayoutInflater().inflate(R.layout.tab_indicator, null)).setContent(intent);*/
 		tabSpec = tabHost.newTabSpec("postOrShare_status").setIndicator("Link").setContent(intent);
 		tabHost.addTab(tabSpec);
 		
-		// Add Share Picture tab to the tab host
+		// ADD SharePicture TO THE TAB-HOST
 		intent = new Intent().setClass(getApplicationContext(), 
 				net.betavinechronicle.client.android.SharePicture.class);		
-		/*tabSpec = tabHost.newTabSpec("postOrShare_picture").setIndicator(
-				getLayoutInflater().inflate(R.layout.tab_indicator, null)).setContent(intent);*/
-		tabSpec = tabHost.newTabSpec("postOrShare_status").setIndicator("Picture").setContent(intent);
+		tabSpec = tabHost.newTabSpec("postOrShare_status").setIndicator("Pict.").setContent(intent);
 		tabHost.addTab(tabSpec);
 		
-		// Add Share Audio tab to the tab host
+		// ADD ShareAudio TO THE TAB-HOST
 		intent = new Intent().setClass(getApplicationContext(), 
 				net.betavinechronicle.client.android.ShareAudio.class);		
-		/*tabSpec = tabHost.newTabSpec("postOrShare_audio").setIndicator(
-				getLayoutInflater().inflate(R.layout.tab_indicator, null)).setContent(intent);*/
 		tabSpec = tabHost.newTabSpec("postOrShare_status").setIndicator("Audio").setContent(intent);
 		tabHost.addTab(tabSpec);
 		
-		// Add Share Video tab to the tab host
-		intent = new Intent().setClass(getApplicationContext(), 
-				net.betavinechronicle.client.android.ShareVideo.class);		
-		/*tabSpec = tabHost.newTabSpec("postOrShare_video").setIndicator(
-				getLayoutInflater().inflate(R.layout.tab_indicator, null)).setContent(intent);*/
-		tabSpec = tabHost.newTabSpec("postOrShare_status").setIndicator("Video").setContent(intent);
-		tabHost.addTab(tabSpec);
-		
+		// SET THE PostStatus AS THE DEFAULT TAB
 		tabHost.setCurrentTab(0);
 	}
 	
@@ -89,8 +71,8 @@ public class PostOrShare extends TabActivity {
     		this.finish();
     		return true;
     	
-    	case R.id.postOrShare_options_profile: 
-    		this.setResult(Porter.RESULTCODE_SWITCH_ACTIVITY_TO_PROFILE);
+    	case R.id.postOrShare_options_settings: 
+    		this.setResult(Porter.RESULTCODE_SWITCH_ACTIVITY_TO_SETTINGS);
     		this.finish();
     		return true;
     	

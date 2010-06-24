@@ -62,9 +62,8 @@ public class EntryDetail extends Activity {
 		final ImageView typeImageView = (ImageView) findViewById(R.id.entry_detail_typeIcon);
 		final TextView titleTextView = (TextView) findViewById(R.id.entry_detail_title);
 		final TextView updatedTextView = (TextView) findViewById(R.id.entry_detail_updated);
-		final Button editPostButton = (Button) findViewById(R.id.entry_detail_editPost);
-		final Button addCommentButton = (Button) findViewById(R.id.entry_detail_addComment);
-		final Button deletePostButton = (Button) findViewById(R.id.entry_detail_deletePost);
+		final Button editPostButton = (Button) findViewById(R.id.entry_detail_editEntry);
+		final Button deletePostButton = (Button) findViewById(R.id.entry_detail_deleteEntry);
 		this.clearPreviewBlock();	 
 		final int targetIndex = index;
 		final List<PostItem> postItems = mPorter.getPostItems();
@@ -294,80 +293,50 @@ public class EntryDetail extends Activity {
 							relEnclosure = StringEscapeUtils.unescapeHtml(link.getHref()).trim();
 					}
 				}
-				// debug
-				//relEnclosure = "http://dl.dropbox.com/u/4412045/Supercell%20-%20Kimi%20no%20Shiranai%20Monogatari.mp3";
-				//relEnclosure = "http://chronicle.loc/file/view/key/ARwmwR5EAted9GpgoZ00JgDb6yiTrreq/Take%20Me%20To%20Your%20Heart.mp3";
+				
 				if (relEnclosure != null) {
 					try {
 						mediaPlayer.setDataSource(relEnclosure);
 					}
 					catch (IOException ex) {
-						Log.e("EntryDetail-Setting data source to media player", ex.getMessage());
-						mediaPlayer = null;
+						Log.e("EntryDetail >> Setting data source to media player.", ex.getMessage());
 					}
 					catch (Exception ex) {
-						Log.e("EntryDetail-Setting data source to media player", ex.getMessage());
-						mediaPlayer = null;
+						Log.e("EntryDetail >> Setting data source to media player.", ex.getMessage());
 					}
 					
 					listenButton.setOnClickListener(new View.OnClickListener() {
 						
 						@Override
 						public void onClick(View v) {
-							// TODO Auto-generated method stub
 							if (mediaPlayer != null) {
 								if (!mediaPlayer.isPlaying()) {
 									try {
 										mediaPlayer.prepare();
 										mediaPlayer.start();
+										listenButton.setText("Stop listening");
 									}
 									catch (IOException ex) {
-										mediaPlayer.release();
-										Log.e("EntryDetail-Setting data source to media player", ex.getMessage());
+										listenButton.setEnabled(false);
+										listenButton.setText("Media error...");
+										Log.e("EntryDetail >> Setting preparing and starting media player.", ex.getMessage());
 									}
-									listenButton.setText("Stop listening");
 								}
 								else {
-									mediaPlayer.stop();
-									listenButton.setText("Listen");
+									try {
+										mediaPlayer.stop();			
+										listenButton.setText("Listen");															
+									}
+									catch (IllegalStateException ex) {
+										listenButton.setEnabled(false);
+										listenButton.setText("Media error...");
+										Log.e("EntryDetail >> Setting stopping media player.", ex.getMessage());
+									}
 								}
 							}
 						}
 					});
 				}
-			}
-			else if (postItem.getType() == PostItem.TYPE_VIDEO) {
-				WebView webPreview = this.insertWebPreview(PREVIEW_BLOCK_WEB_ID);
-				String previewData = "";
-				if (object.hasTitle()) {
-					AtomText title = object.getTitle();
-					String titleValue = StringEscapeUtils.unescapeHtml(title.getValue());
-					if (title.getType().equals("html"))
-						previewData = titleValue + "<br/>";
-					else
-						previewData = "<h4>" + titleValue + "</h4>";
-				}
-				
-				if (object.hasSummary()) {
-					AtomText summary = object.getSummary();
-					String summaryValue = StringEscapeUtils.unescapeHtml(summary.getValue());
-					if (summary.getType().equals("html"))
-						previewData += "<br/>Note:<br/>" + summaryValue;
-					else
-						previewData += "<p>Note:<br/><i>" + summaryValue + "</i></p>";
-				}
-				
-				if (object.hasContent()) {
-					AtomContent content = object.getContent();
-					String contentValue = StringEscapeUtils.unescapeHtml(content.getValue());
-					if (!content.hasSrc()) 
-						previewData += "<br/>" + contentValue;
-					else {
-						// TODO: contains SRC attribute, so the content value is empty
-						// need to handle the object referenced by SRC
-					}
-				}
-				webPreview.loadData(previewData, "text/html", "utf-8");	
 			}
 		}
 		else { // unrecognized object-type of activity:object
@@ -420,22 +389,13 @@ public class EntryDetail extends Activity {
 			}
 		});
 		
-		addCommentButton.setOnClickListener(new View.OnClickListener() {
-			
-			@Override
-			public void onClick(View v) {
-				// TODO: not implemented yet :)
-				
-			}
-		});
-		
 		deletePostButton.setOnClickListener(new View.OnClickListener() {
 			
 			@Override
 			public void onClick(View v) {
 				new AlertDialog.Builder(EntryDetail.this)
-				.setMessage("Are you sure?")
 				.setTitle("Deleting Entry")
+				.setMessage("Are you sure?")
 				.setCancelable(true)
 				.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
 					
@@ -521,9 +481,6 @@ public class EntryDetail extends Activity {
 			
 			switch(resultCode) {
 			case Porter.RESULTCODE_EDITING_ENTRY:
-				/*int targetIndex = data.getIntExtra(Porter.EXTRA_KEY_TARGET_POSTITEM_INDEX, -1);
-				if (mPorter.hasFeed() && mPorter.hasPostItems() && (targetIndex > -1))
-					this.displayEntryDetail(targetIndex);*/
 				this.setResult(Porter.RESULTCODE_EDITING_ENTRY, data);
 				finish();
 				break;
@@ -532,26 +489,14 @@ public class EntryDetail extends Activity {
 	}
 	
 	private class WebClient extends WebViewClient {
-		
-		private boolean mIsOverrideUrlLoading = false;
-		
+	
 		@Override
 		public boolean shouldOverrideUrlLoading(WebView view, String url) {
-			// TODO Auto-generated method stub
-			if (mIsOverrideUrlLoading) {
-				view.loadUrl(url);
-			}
-			else {
-				Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-				startActivity(intent);
-			}
+			Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+			startActivity(intent);
 
 			return true;
 		}
-		
-		/*public void setIsOverrideUrlLoading(boolean isOverrideUrlLoading) {
-			mIsOverrideUrlLoading = isOverrideUrlLoading;
-		}*/
+
 	}
-	
 }

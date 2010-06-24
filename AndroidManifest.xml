@@ -16,14 +16,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".EnterUsername"
-                  android:label="Login Page - Betavine Chronicle Client">
-        </activity>
         <activity android:name=".EntryDetail"
                   android:label="Entry Detail - Betavine Chronicle Client">
         </activity>
-        <activity android:name=".EditProfile"
-                  android:label="Edit Profile - Betavine Chronicle Client"
+        <activity android:name=".Settings"
+                  android:label="Settings - Betavine Chronicle Client"
                   android:configChanges="orientation|keyboardHidden">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -22,6 +22,8 @@ import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
@@ -34,17 +36,18 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.RadioButton;
 import android.widget.TextView;
-import android.widget.Toast;
 
 public class ShareAudio extends Activity {
 
+	static final int REQUESTCODE_GET_AUDIO = 888;
+	
 	private Porter mPorter;
 	private String mAudioFilePath = null;
 	private String mAudioFileExt = null;
 	private ActivityXmlWriter mActivityWriter;	
-	
-	//private String mDebugMessage;
-	
+	private ProgressDialog mProgressDialog = null;
+	private String mAlertMessage = "";
+		
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -88,9 +91,9 @@ public class ShareAudio extends Activity {
 			@Override
 			public void onClick(View v) {
 				
-				Intent getImageIntent = new Intent(Intent.ACTION_GET_CONTENT);
-				getImageIntent.setType("audio/mp3");
-				startActivityForResult(getImageIntent, 1543);
+				Intent getAudioIntent = new Intent(Intent.ACTION_GET_CONTENT);
+				getAudioIntent.setType("audio/mp3");
+				startActivityForResult(getAudioIntent, REQUESTCODE_GET_AUDIO);
 			}
 		});
 		
@@ -101,7 +104,7 @@ public class ShareAudio extends Activity {
 			 */
 			
 			postButton.setText("Confirm Edit");
-			this.setTitle("Edit Picture - Betavine Chronicle Client");
+			this.setTitle("Edit Audio - Betavine Chronicle Client");
 			
 			// GET THE INDEX OF THE CLICKED ITEM IN THE LIST-VIEW
 			final int targetIndex = this.getIntent().getIntExtra(
@@ -134,7 +137,8 @@ public class ShareAudio extends Activity {
 								.toString()).trim();
 
 						if (newTitle.equals("") || newNote.equals("")) {
-							showToastMessage("Please fill in the title and the note box.");
+							mAlertMessage = "Please fill in the title and the note box.";
+							displayAlert.run();
 							return;
 						}
 						
@@ -168,7 +172,8 @@ public class ShareAudio extends Activity {
 							
 							if (targetUri == null && targetMediaUri == null) {
 								// NO URI PROVIDED FOR THE EDIT PROCESS
-								showToastMessage("This entry and the picture are not allowed to be edited...");
+								mAlertMessage = "This entry and the audio are not allowed to be edited...";
+								displayAlert.run();
 								return;
 							}
 						}
@@ -179,45 +184,100 @@ public class ShareAudio extends Activity {
 																			
 							if (targetMediaUri == null) {
 								// NO URI PROVIDED FOR THE EDIT PROCESS
-								showToastMessage("This picture is not allowed to be edited...");
+								mAlertMessage = "This audio is not allowed to be edited...";
+								displayAlert.run();
 								return;
 							}
 							
 							HttpTasks uploadAudioRequest = createUploadAudioRequest(targetMediaUri, 
 									HttpTasks.HTTP_PUT, targetIndex, newTitle, newNote, "Editing Audio Entry");
 							
-							try {
-								uploadAudioRequest.getHttpPut().setEntity((new FileEntity(
-										new File(mAudioFilePath), mAudioFileExt)));
-								uploadAudioRequest.addHeaderToHttpPut("User-Agent", "AMC_BV/0.1");
-						    	uploadAudioRequest.addHeaderToHttpPut("Content-Type", mAudioFileExt);
-						    	uploadAudioRequest.addHeaderToHttpPut("Slug", newTitle);
-						    	uploadAudioRequest.addHeaderToHttpPut("Password", "storytlr");
-							}
-							catch(Exception ex) {
-								// TODO: exception handling
-							}
+							uploadAudioRequest.getHttpPut().setEntity((new FileEntity(
+									new File(mAudioFilePath), mAudioFileExt)));
+							uploadAudioRequest.addHeaderToHttpPut("User-Agent", mPorter.getAppName());
+					    	uploadAudioRequest.addHeaderToHttpPut("Content-Type", mAudioFileExt);
+					    	uploadAudioRequest.addHeaderToHttpPut("Slug", newTitle);
+					    	uploadAudioRequest.addHeaderToHttpPut("Password", 
+				    				mPorter.loadPreferenceString(Porter.PREFERENCES_KEY_PASSWORD, ""));
+							
 							uploadAudioRequest.start();
 						}
 						else {
-							// USING URL RADIO BUTTON IS CHECKED
+							// EITHER URL RADIO BUTTON IS CHECKED OR THE USER DIDN'T CHANGE THE AUDIO
 							
 							AtomText title = mPorter.getAtomFactory().text("text", newTitle);
+			        		AtomText oldObjectTitle = object.getTitle();
 			        		object.setTitle(title);
 			        		
 			        		AtomText summary = mPorter.getAtomFactory().text("text", newNote);
+			        		AtomText oldObjectSummary = object.getSummary();
+							AtomText oldEntrySummary = entry.getSummary();
 							object.setSummary(summary);
 							
+							String xmlEntry = null;
+							
 							if (byUrlRadio.isChecked()) {
-								// TODO: edit the value of necessary elements
+								// USING URL RADIO BUTTON IS CHECKED, ASSUME NEW AUDIO HAS PROVIDED
+								
+								String newAudioUrl = StringEscapeUtils.escapeHtml(urlEditText.getText()
+										.toString()).trim();
+								
+								if (newAudioUrl.equals("")) {
+									mAlertMessage = "Please fill in the URL box.";
+									displayAlert.run();
+									return;
+								}
+								
+				        		// TODO: detect the audio type
+								String audioType = "audio/*";
+				        		
+				        		AtomContent content = mPorter.getAtomFactory().content(
+				        				null, audioType, newAudioUrl);
+				        		AtomContent oldEntryContent = entry.getContent();
+				        		entry.setContent(content);
+							
+								AtomLink linkEnclosure = null;
+								AtomLink oldLinkEnclosure = null;
+								linkEnclosure = oldLinkEnclosure = mPorter.getLinkByRelValue(
+										object.getLinks(), AtomLink.REL_ENCLOSURE);
+								if (linkEnclosure == null) {
+									linkEnclosure = mPorter.getAtomFactory().link();
+									linkEnclosure.setRel(AtomLink.REL_ENCLOSURE);
+									object.addLink(linkEnclosure);
+								}
+								
+								String oldHrefLinkEnclosure = linkEnclosure.getHref();
+								String oldTitleLinkEnclosure = linkEnclosure.getTitle();
+								String oldTypeLinkEnclosure = linkEnclosure.getType();
+								linkEnclosure.setHref(newAudioUrl);
+								linkEnclosure.setTitle(newTitle);
+								linkEnclosure.setType(audioType);
+																
+								xmlEntry = mActivityWriter.toXml(entry);
+								
+								entry.setContent(oldEntryContent);
+								if (oldLinkEnclosure == null)
+									object.removeLink(linkEnclosure);
+								else {
+									linkEnclosure.setHref(oldHrefLinkEnclosure);
+									linkEnclosure.setTitle(oldTitleLinkEnclosure);
+									linkEnclosure.setType(oldTypeLinkEnclosure);
+								}
 							}
+							else
+								xmlEntry = mActivityWriter.toXml(entry);
 							
 							Intent data = mPorter.prepareIntentForEditing(targetIndex, 
-									mActivityWriter.toXml(entry), targetUri, "Editing Audio Entry");
+									xmlEntry, targetUri, "Editing Audio Entry");
 							if (getParent() == null) 
 								setResult(Porter.RESULTCODE_EDITING_ENTRY, data);
 							else
 								getParent().setResult(Porter.RESULTCODE_EDITING_ENTRY, data);
+
+							object.setTitle(oldObjectTitle);
+							entry.setSummary(oldEntrySummary);
+							object.setSummary(oldObjectSummary);
+							
 							finish();
 						}
 					} // END OF onClick
@@ -240,30 +300,35 @@ public class ShareAudio extends Activity {
 							.toString()).trim();
 
 					if (newTitle.equals("") || newNote.equals("")) {
-						showToastMessage("Please fill in the title and the note box.");
+						mAlertMessage = "Please fill in the title and the note box.";
+						displayAlert.run();
 						return;
 					}
 					
 					String username = mPorter.loadPreferenceString(Porter.PREFERENCES_KEY_USERNAME, 
-							"Anonymous");
+							"nobody");
 					
-					if (byUploadRadio.isChecked() && (mAudioFilePath != null) && (mAudioFileExt != null)) {
-						// UPLOAD IMAGE RADIO BUTTON IS CHECKED AND A FILE IS CHOSEN
-																		
-						HttpTasks uploadAudioRequest = createUploadAudioRequest(getString(R.string.service_endpoint_uri)
+					if (byUploadRadio.isChecked()) {
+						// UPLOAD AUDIO RADIO BUTTON IS CHECKED
+						
+						if ((mAudioFilePath == null) && (mAudioFileExt == null)) {
+							mAlertMessage = "Please select an audio file.";
+							displayAlert.run();
+							return;
+						}
+						HttpTasks uploadAudioRequest = createUploadAudioRequest(
+								mPorter.loadPreferenceString(Porter.PREFERENCES_KEY_ENDPOINT, "")
 								+ "?username=" + username, HttpTasks.HTTP_POST, -1, 
 								newTitle, newNote, "Sharing new Audio");
-						try {
-							uploadAudioRequest.getHttpPost().setEntity((new FileEntity(
-									new File(mAudioFilePath), mAudioFileExt)));
-							uploadAudioRequest.addHeaderToHttpPost("User-Agent", "AMC_BV/0.1");
-							uploadAudioRequest.addHeaderToHttpPost("Content-Type", mAudioFileExt);
-							uploadAudioRequest.addHeaderToHttpPost("Slug", newTitle);
-							uploadAudioRequest.addHeaderToHttpPost("Password", "storytlr");
-						}
-						catch(Exception ex) {
-							// TODO: exception handling
-						}
+						
+						uploadAudioRequest.getHttpPost().setEntity((new FileEntity(
+								new File(mAudioFilePath), mAudioFileExt)));
+						uploadAudioRequest.addHeaderToHttpPost("User-Agent", mPorter.getAppName());
+						uploadAudioRequest.addHeaderToHttpPost("Content-Type", mAudioFileExt);
+						uploadAudioRequest.addHeaderToHttpPost("Slug", newTitle);
+						uploadAudioRequest.addHeaderToHttpPost("Password", 
+			    				mPorter.loadPreferenceString(Porter.PREFERENCES_KEY_PASSWORD, ""));
+						
 						uploadAudioRequest.start();
 					}
 					else {
@@ -273,7 +338,8 @@ public class ShareAudio extends Activity {
 								.toString()).trim();
 						
 						if (newAudioUrl.equals("")) {
-							showToastMessage("Please fill in the URL box.");
+							mAlertMessage = "Please fill in the URL box.";
+							displayAlert.run();
 							return;
 						}
 						
@@ -304,10 +370,7 @@ public class ShareAudio extends Activity {
 						AtomText summary = mPorter.getAtomFactory().text("text", newNote);
 						object.setSummary(summary);
 						entry.setSummary(summary);
-						
-						/*final TextView debugTextView = (TextView) findViewById(R.id.debug);
-						debugTextView.setText(mActivityWriter.toXml(entry));*/
-						
+												
 						// INCREMENT NEXT LINK ENTRY'S ID
 						mPorter.incrementPreferenceInt(ActivityObject.AUDIO);
 						
@@ -318,7 +381,7 @@ public class ShareAudio extends Activity {
 						 */
 						Intent data = new Intent();
 						data.putExtra(Porter.EXTRA_KEY_XML_CONVERTED_ENTRY, mActivityWriter.toXml(entry));
-						data.putExtra(Porter.EXTRA_KEY_DIALOG_TITLE, "Sharing an Audio");
+						data.putExtra(Porter.EXTRA_KEY_DIALOG_TITLE, "Sharing new Audio");
 						if (getParent() == null) 
 							setResult(Porter.RESULTCODE_POSTING_ENTRY, data);
 						else
@@ -332,23 +395,43 @@ public class ShareAudio extends Activity {
 	
 	private HttpTasks createUploadAudioRequest(String targetMediaUri, int httpMode, final int targetItemIndex,
 			final String newTitle, final String newNote, final String dialogTitle) {
+		
+		mProgressDialog = ProgressDialog.show(ShareAudio.this, "Uploading Audio file", 
+				"Please wait...");
 		return new HttpTasks(targetMediaUri, httpMode) {
 		
 				@Override
 				public void run() {
-					// EXECUTE THE HTTP POST REQUEST TO UPLOAD THE PICTURE FILE FIRST
+					// EXECUTE THE HTTP REQUEST TO UPLOAD THE AUDIO FILE FIRST
 					super.run();
 					
-					Log.d("INSIDE onClickPostButton_ShareAudio", "Finished executing POST/PUT request");
-	    			if (this.hasHttpResponse()) {
+					if (this.hasHttpResponse()) {
 	    				int statusCode = this.getHttpResponse().getStatusLine().getStatusCode();
-	    				Log.d("INSIDE onClickPostButton_ShareAudio", "Has HttpResponse, Status Code:" + statusCode);
-	    				if (statusCode != 201 && statusCode != 200)
+	    				if (statusCode != 201 && statusCode != 200) {
+	    					try {
+	    						String responseText = GeneralMethods.getRawStringFromResponse(
+										this.getHttpResponse().getEntity().getContent());
+	    						Log.e("ShareAudio >> Upload failed, wrong status code(" + statusCode
+										+ ")", responseText);
+	    						mAlertMessage = "Failed to upload the audio file...";
+	    						runOnUiThread(displayAlert);
+							} 
+	    					catch (IllegalStateException ex) {
+	    						Log.e("ShareAudio >> Upload failed, wrong status code(" + statusCode
+										+ "), getRawStringFromResponse() failed.", 
+										ex.getMessage());
+							}
+	    					catch (IOException ex) {
+	    						Log.e("ShareAudio >> Upload failed, wrong status code(" + statusCode
+										+ "), getRawStringFromResponse() failed.", 
+										ex.getMessage());
+							}
 	    					return;
+	    				}
+	    				
 	    				AtomEntry atomEntry = null;
 	    				try {
-	    					// GET THE ENTRY RESPONSE AND PARSE IT
-	    					
+	    					// GET THE ENTRY RESPONSE AND PARSE IT	    					
 							XmlPullParserFactory xppFactory = XmlPullParserFactory.newInstance();
 				        	xppFactory.setNamespaceAware(true);
 				        	XmlPullParser xpp = xppFactory.newPullParser();
@@ -358,33 +441,14 @@ public class ShareAudio extends Activity {
 				        	atomEntry = xppActivityReader.parseEntry(xpp);
 				        }
 				        catch(XmlPullParserException ex) {
-				        	Log.e("INSIDE onClickPostButton_ShareAudio XPP", ex.getMessage());
+				        	Log.e("ShareAudio >> After upload, parsing response entry failed.", 
+				        			ex.getMessage());
 				        }
 				        catch(IOException ex) {
-				        	Log.e("INSIDE onClickPostButton_ShareAudio XPP", ex.getMessage());
-				        }
-				        catch(Exception ex) {
-				        	Log.e("INSIDE onClickPostButton_ShareAudio XPP", ex.getMessage());
+				        	Log.e("ShareAudio >> After upload, parsing response entry failed.", 
+				        			ex.getMessage());
 				        }
 	    				
-	    				/*try {
-							mDebugMessage = GeneralMethods.getRawStringFromResponse(
-									this.getHttpResponse().getEntity().getContent());
-							runOnUiThread(new Runnable() {
-								@Override
-								public void run() {
-									final TextView debugTextView = (TextView) findViewById(R.id.debug);
-				    				debugTextView.setText(mDebugMessage);
-								}								
-							});
-						} 
-	    				catch (IllegalStateException ex) {
-	    					Log.e("INSIDE onClickPostButton_ShareAudio XPP", ex.getMessage());
-						} 
-	    				catch (IOException ex) {
-	    					Log.e("INSIDE onClickPostButton_ShareAudio XPP", ex.getMessage());
-						}*/
-				        
 				        if (atomEntry != null) {
 				        	/*
 				        	 *  EDIT THE RETRIEVED ENTRY WITH THE INPUT FROM USER (TITLE & NOTE)
@@ -393,57 +457,101 @@ public class ShareAudio extends Activity {
 				        	 */
 				        	
 				        	String username = mPorter.loadPreferenceString(
-				        			Porter.PREFERENCES_KEY_USERNAME, "Anonymous");
+				        			Porter.PREFERENCES_KEY_USERNAME, "nobody");
+				        	String targetUri = null;
+				        	String xmlEntry = null;
+				        	
 				        	if (atomEntry instanceof ActivityEntry) {
 				        		ActivityEntry activityEntry = (ActivityEntry) atomEntry;
 				        		ActivityObject object = activityEntry.getObjects().get(0);
 				        		
+				        		targetUri = mPorter.extractHrefFromLinks(activityEntry.getLinks(), 
+				        				AtomLink.REL_EDIT);
+								if (targetUri == null) {
+									mAlertMessage = "This entry is not allowed to be edited...";
+									runOnUiThread(displayAlert);
+									return;
+								}
+				        		
 				        		AtomText title = mPorter.getAtomFactory().text("text", newTitle);
+				        		AtomText oldObjectTitle = object.getTitle();
 				        		object.setTitle(title);
 				        		
 				        		title = mPorter.getAtomFactory().text("text", 
 										username + " shared a link");
+				        		AtomText oldActEntryTitle = activityEntry.getTitle();
 				        		activityEntry.setTitle(title);
 				        		
 				        		AtomText summary = mPorter.getAtomFactory().text("text", newNote);
+				        		AtomText oldActEntrySummary = activityEntry.getSummary();
+				        		AtomText oldObjectSummary = object.getSummary();
 				        		activityEntry.setSummary(summary);
 				        		object.setSummary(summary);
 				        		
-				        		String targetUri = mPorter.extractHrefFromLinks(activityEntry.getLinks(), 
-				        				AtomLink.REL_EDIT);
-								if (targetUri == null) {
-									showToastMessage("This entry is not allowed to be edited...");
-									return;
-								}
-				        		
-								// INCREMENT NEXT LINK ENTRY'S ID
+								// INCREMENT NEXT AUDIO ENTRY'S ID
 								mPorter.incrementPreferenceInt(ActivityObject.AUDIO);
-				        		
-								/*
-								 *  SET AN INTENT IN ACTIVITY'S RESULT 
-								 *  AND 
-								 *  GO BACK TO UserStream ACTIVITY WITH THE RESULT
-								 */
-				        		Intent data = mPorter.prepareIntentForEditing(targetItemIndex, 
-										mActivityWriter.toXml(activityEntry), targetUri, dialogTitle);
-								if (getParent() == null) 
-									setResult(Porter.RESULTCODE_EDITING_ENTRY, data);
-								else
-									getParent().setResult(Porter.RESULTCODE_EDITING_ENTRY, data);
-								finish();
+				        										
+								xmlEntry = mActivityWriter.toXml(activityEntry);
+								
+								activityEntry.setTitle(oldActEntryTitle);
+								object.setTitle(oldObjectTitle);
+								activityEntry.setSummary(oldActEntrySummary);
+				        		object.setSummary(oldObjectSummary);								
 			        		}
 			        		else { 
 			        			// THE ENTRY IS A REGULAR ATOM-ENTRY
+			        			targetUri = mPorter.extractHrefFromLinks(atomEntry.getLinks(), 
+				        				AtomLink.REL_EDIT);
+								if (targetUri == null) {
+									mAlertMessage = "This entry is not allowed to be edited...";
+									runOnUiThread(displayAlert);
+									return;
+								}
+								
+			        			AtomText title = mPorter.getAtomFactory().text("text", newTitle);
+				        		AtomText oldEntryTitle = atomEntry.getTitle();
+				        		atomEntry.setTitle(title);
+				        		
+				        		AtomText summary = mPorter.getAtomFactory().text("text", newNote);
+				        		AtomText oldEntrySummary = atomEntry.getSummary();
+				        		atomEntry.setSummary(summary);
+				        		
+				        		// TODO: atom-entry -> activity-entry (object entry)
+				        		//xmlEntry = mActivityWriter.toXml(activityEntry);
+				        		
+				        		atomEntry.setTitle(oldEntryTitle);
+				        		atomEntry.setSummary(oldEntrySummary);
 			        		} 
-			        		
+
+							/*
+							 *  SET AN INTENT IN ACTIVITY'S RESULT 
+							 *  AND 
+							 *  GO BACK TO UserStream ACTIVITY WITH THE RESULT
+							 */
+			        		Intent data = mPorter.prepareIntentForEditing(targetItemIndex, 
+									xmlEntry, targetUri, dialogTitle);
+							if (getParent() == null) 
+								setResult(Porter.RESULTCODE_EDITING_ENTRY, data);
+							else
+								getParent().setResult(Porter.RESULTCODE_EDITING_ENTRY, data);
+							finish();			        		
 				        }
-				        else 
-				        	Log.e("INSIDE onClickPostButton_ShareAudio", "Response entry is null");
+				        else {
+				        	Log.e("ShareAudio >> After upload, reading the entry response.", 
+		        					"Response entry is null.");
+				        	mAlertMessage = "Failed to edit the Audio entry's metadata...";
+				        	runOnUiThread(displayAlert);
+				        }
 	    			}
-	    			else
-	    				Log.e("INSIDE onClickPostButton_ShareAudio", 
-							(this.getExceptionMessage() != null)? 
-									this.getExceptionMessage():"Http response is null");
+	    			else {
+	    				Log.e("ShareAudio >> Uploading, checking HTTP response.", 
+								(this.getExceptionMessage() != null)? 
+										this.getExceptionMessage():"HTTP response is null.");
+	    				mAlertMessage = "Failed to edit the Audio entry's metadata...";
+			        	runOnUiThread(displayAlert);
+	    			}
+					
+					mProgressDialog.dismiss();
 				}
 				
 			};
@@ -453,7 +561,7 @@ public class ShareAudio extends Activity {
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		super.onActivityResult(requestCode, resultCode, data);
 		
-		if (requestCode == 1543 && resultCode == Activity.RESULT_OK) {
+		if (requestCode == REQUESTCODE_GET_AUDIO && resultCode == Activity.RESULT_OK) {
 			final TextView displayAudioFileName = (TextView) findViewById(R.id.postOrShare_audio_displayFileName);
 			String[] audioInfo = this.getFileInfoFromUri(data.getData());
 			mAudioFilePath = audioInfo[0];
@@ -462,30 +570,41 @@ public class ShareAudio extends Activity {
 		}
 	}
 	
-	public String[] getFileInfoFromUri (Uri contentUri) {
+	private String[] getFileInfoFromUri (Uri contentUri) {
 		String[] fileInfo = new String[3];
 		
-		String[] projection = { MediaStore.Images.Media.DATA, // THE REAL PATH NAME OF THE IMAGE FILE
-								MediaStore.Images.Media.MIME_TYPE, // THE MIME TYPE
-								MediaStore.Images.Media.DISPLAY_NAME }; // THE FILE NAME 
+		String[] projection = { MediaStore.Audio.Media.DATA, // THE REAL PATH NAME OF THE AUDIO FILE
+								MediaStore.Audio.Media.MIME_TYPE, // THE MIME TYPE
+								MediaStore.Audio.Media.DISPLAY_NAME }; // THE FILE NAME 
 	    Cursor cursor = managedQuery(contentUri, projection, null, null, null);
 	    
-	    int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);  
+	    int column_index = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA);  
 	    cursor.moveToFirst();  
 	    fileInfo[0] = cursor.getString(column_index);
 	    
-	    column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.MIME_TYPE);  
+	    column_index = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.MIME_TYPE);  
 	    cursor.moveToFirst();  
 	    fileInfo[1] = cursor.getString(column_index);
 	    
-	    column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME);  
+	    column_index = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME);  
 	    cursor.moveToFirst();  
 	    fileInfo[2] = cursor.getString(column_index);
 	    
 	    return fileInfo;
 	}	
-	
-	private void showToastMessage(String message) {
-		Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
-	}
+
+    private Runnable displayAlert = new Runnable() {
+
+		@Override
+		public void run() {
+			if (mProgressDialog != null) mProgressDialog.dismiss();
+			new AlertDialog.Builder(ShareAudio.this)
+			.setTitle("Sharing new Audio")
+			.setMessage(mAlertMessage)
+			.setCancelable(true)
+			.setPositiveButton("OK", null)
+			.show();
+		}
+    	
+    };
 }

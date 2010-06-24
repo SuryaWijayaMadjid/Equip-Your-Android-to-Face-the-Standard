@@ -30,6 +30,7 @@
 		<EditText android:id="@+id/postOrShare_link_link"
 			android:layout_width="fill_parent"
 			android:layout_height="wrap_content"
+			android:text="http://"
 			/>
 		<TextView
 			android:layout_width="wrap_content"
@@ -41,21 +42,10 @@
 			android:layout_width="fill_parent"
 			android:layout_height="wrap_content"
 			/>
-		<CheckBox android:id="@+id/postOrShare_link_isTweet"
-			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
-			android:paddingTop="10dip"
-			android:text="Also post in Twitter"
-			/>
 		<Button android:id="@+id/postOrShare_link_postButton"
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
 			android:text="Post"
-			/>
-		<TextView android:id="@+id/debug"
-			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
-			android:text="[xml-converted entry]"
 			/>
 		
 	</LinearLayout>

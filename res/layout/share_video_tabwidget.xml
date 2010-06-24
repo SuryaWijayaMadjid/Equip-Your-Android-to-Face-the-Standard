@@ -30,6 +30,7 @@
 		<EditText android:id="@+id/postOrShare_video_link"
 			android:layout_width="fill_parent"
 			android:layout_height="wrap_content"
+			android:inputType="none"
 			/>
 		<TextView
 			android:layout_width="wrap_content"
@@ -47,12 +48,6 @@
 		<EditText android:id="@+id/postOrShare_video_note"
 			android:layout_width="fill_parent"
 			android:layout_height="wrap_content"
-			/>
-		<CheckBox android:id="@+id/postOrShare_video_isTweet"
-			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
-			android:paddingTop="10dip"
-			android:text="Also post in Twitter"
 			/>
 		<Button android:id="@+id/postOrShare_video_postButton"
 			android:layout_width="wrap_content"

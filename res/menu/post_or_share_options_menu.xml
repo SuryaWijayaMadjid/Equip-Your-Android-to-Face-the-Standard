@@ -2,8 +2,8 @@
 	<item android:id="@+id/postOrShare_options_userStream"
 		  android:title="User stream"
 		  />
-	<item android:id="@+id/postOrShare_options_profile"
-		  android:title="Profile"
+	<item android:id="@+id/postOrShare_options_settings"
+		  android:title="Settings"
 		  />
 	<item android:id="@+id/postOrShare_options_exit"
 		  android:title="Exit"

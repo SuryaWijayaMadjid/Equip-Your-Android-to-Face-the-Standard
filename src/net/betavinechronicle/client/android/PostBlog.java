@@ -15,17 +15,18 @@ import org.onesocialweb.model.atom.AtomText;
 import org.onesocialweb.xml.writer.ActivityXmlWriter;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.Toast;
 
 public class PostBlog extends Activity {
 
 	private Porter mPorter;
 	private ActivityXmlWriter mActivityWriter;	
+	private String mAlertMessage = "";
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -97,7 +98,8 @@ public class PostBlog extends Activity {
 								.toString()).trim();
 						
 						if (newTitle.equals("") || newContent.equals("")) {
-							showToastMessage("Please fill in the title and content box.");
+							mAlertMessage = "Please fill in the title and content box.";
+							displayAlert.run();
 							return;
 						}
 
@@ -112,27 +114,41 @@ public class PostBlog extends Activity {
 							ActivityEntry activityEntry = (ActivityEntry) atomEntry;
 							ActivityObject object = activityEntry.getObjects().get(postItem.getObjectIndex());
 							
+							AtomText oldObjectTitle = object.getTitle();
 							object.setTitle(title);
+							
+							AtomContent oldObjectContent = object.getContent();
+							AtomContent oldActEntryContent = activityEntry.getContent();
 							object.setContent(content);
 							activityEntry.setContent(content);
+							
+							Date oldObjectUpdated = object.getUpdated();
+							Date oldActEntryUpdated = activityEntry.getUpdated();
 							object.setUpdated(currentDateTime);
 							activityEntry.setUpdated(currentDateTime);
 							
 							targetUri = mPorter.extractHrefFromLinks(object.getLinks(), AtomLink.REL_EDIT);
 							xmlEntry = mActivityWriter.toXml(activityEntry);
+							
+							object.setTitle(oldObjectTitle);
+							object.setContent(oldObjectContent);
+							activityEntry.setContent(oldActEntryContent);
+							object.setUpdated(oldObjectUpdated);
+							activityEntry.setUpdated(oldActEntryUpdated);
 						}
-						else {
+						else {			
+							// TODO: atom-entry => activity-entry (object-entry)
 							atomEntry.setTitle(title);
 							atomEntry.setContent(content);
-							atomEntry.setUpdated(currentDateTime);							
-							// TODO: atom-entry => activity-entry (object-entry)
+							atomEntry.setUpdated(currentDateTime);				
 						}
 						
 						if (targetUri == null) { 
 							targetUri = mPorter.extractHrefFromLinks(atomEntry.getLinks(), AtomLink.REL_EDIT);
 							if (targetUri == null) {
 								// NO URI PROVIDED FOR THE EDIT PROCESS
-								showToastMessage("This entry is not allowed to be edited...");
+								mAlertMessage = "This entry is not allowed to be edited...";
+								displayAlert.run();
 								return;
 							}
 						}
@@ -143,6 +159,7 @@ public class PostBlog extends Activity {
 						setResult(Porter.RESULTCODE_EDITING_ENTRY, 
 								mPorter.prepareIntentForEditing(targetIndex, xmlEntry, 
 										targetUri, "Editing Blog Entry"));
+												
 						finish();
 					}
 				});
@@ -164,7 +181,8 @@ public class PostBlog extends Activity {
 							.toString()).trim();
 					
 					if (newTitle.equals("") || newContent.equals("")) {
-						showToastMessage("Please fill in the title and content box.");
+						mAlertMessage = "Please fill in the title and content box.";
+						displayAlert.run();
 						return;
 					}
 					
@@ -184,9 +202,7 @@ public class PostBlog extends Activity {
 					
 					ActivityEntry entry = mPorter.constructEntry(currentDateTime, title, 
 							content, mPorter.getActivityFactory().verb(ActivityVerb.POST), object);
-					
-					/*final TextView debugTextView = (TextView) findViewById(R.id.debug);
-					debugTextView.setText(mActivityWriter.toXml(entry));*/
+
 
 					// INCREMENT NEXT BLOG ENTRY'S ID
 					mPorter.incrementPreferenceInt(ActivityObject.ARTICLE);
@@ -208,8 +224,18 @@ public class PostBlog extends Activity {
 			});
 		}
 	}
-	
-	private void showToastMessage(String message) {
-		Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
-	}
+    
+    private Runnable displayAlert = new Runnable() {
+
+		@Override
+		public void run() {
+			new AlertDialog.Builder(PostBlog.this)
+			.setTitle("Posting new Blog")
+			.setMessage(mAlertMessage)
+			.setCancelable(true)
+			.setPositiveButton("OK", null)
+			.show();
+		}
+    	
+    };
 }

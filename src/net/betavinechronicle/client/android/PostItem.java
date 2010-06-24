@@ -143,12 +143,11 @@ public class PostItem {
 	
 	public int getTypeIconResId() {
 		switch (mType) {
-		case PostItem.TYPE_STATUS: return -1;
-		case PostItem.TYPE_BLOG: return -1;
-		case PostItem.TYPE_LINK: return -1;
-		case PostItem.TYPE_PICTURE: return -1;
-		case PostItem.TYPE_AUDIO: return -1;
-		case PostItem.TYPE_VIDEO: return -1;
+		case PostItem.TYPE_STATUS: return R.drawable.status;
+		case PostItem.TYPE_BLOG: return R.drawable.blog;
+		case PostItem.TYPE_LINK: return R.drawable.link;
+		case PostItem.TYPE_PICTURE: return R.drawable.picture;
+		case PostItem.TYPE_AUDIO: return R.drawable.audio;
 		default: return -1;
 		}
 	}

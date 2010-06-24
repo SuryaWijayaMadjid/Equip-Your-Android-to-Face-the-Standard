@@ -57,29 +57,21 @@
 	    	android:paddingBottom="10dip"
 			>
 		</LinearLayout>
-	    <Button android:id="@+id/entry_detail_editPost"
+	    <Button android:id="@+id/entry_detail_editEntry"
 	    	android:layout_width="wrap_content"
 	    	android:layout_height="wrap_content"
 	    	android:layout_below="@id/entry_detail_preview_block"
-	    	android:layout_centerHorizontal="true"
+	    	android:layout_alignParentLeft="true"
 	    	android:layout_alignWithParentIfMissing="true"
-	    	android:text="Edit Post"
+	    	android:text="Edit Entry"
 	    	/>
-	    <Button android:id="@+id/entry_detail_addComment"
+	    <Button android:id="@+id/entry_detail_deleteEntry"
 	    	android:layout_width="wrap_content"
 	    	android:layout_height="wrap_content"
-	    	android:layout_toLeftOf="@id/entry_detail_editPost"
-	    	android:layout_alignTop="@id/entry_detail_editPost"
+	    	android:layout_toRightOf="@id/entry_detail_editEntry"
+	    	android:layout_alignTop="@id/entry_detail_editEntry"
 	    	android:layout_alignWithParentIfMissing="true"
-	    	android:text="Add Comment"
-	    	/>
-	    <Button android:id="@+id/entry_detail_deletePost"
-	    	android:layout_width="wrap_content"
-	    	android:layout_height="wrap_content"
-	    	android:layout_toRightOf="@id/entry_detail_editPost"
-	    	android:layout_alignTop="@id/entry_detail_editPost"
-	    	android:layout_alignWithParentIfMissing="true"
-	    	android:text="Delete Post"
+	    	android:text="Delete Entry"
 	    	/>
 		
 	</RelativeLayout>
