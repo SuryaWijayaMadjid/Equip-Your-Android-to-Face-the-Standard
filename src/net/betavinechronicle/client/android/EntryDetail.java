@@ -374,11 +374,7 @@ public class EntryDetail extends Activity {
 					intent.setClass(getApplicationContext(), 
 							net.betavinechronicle.client.android.ShareAudio.class);
 					break;
-				case PostItem.TYPE_VIDEO:
-					intent.setClass(getApplicationContext(), 
-							net.betavinechronicle.client.android.ShareVideo.class);
-					break;
-				default: // a regular atom-entry (not atom-activity)
+				default: 
 					intent.setClass(getApplicationContext(), 
 							net.betavinechronicle.client.android.PostBlog.class);
 				}
