@@ -63,9 +63,6 @@
                 <data android:mimeType="audio/mp3" />
             </intent-filter>
         </activity>
-        <activity android:name=".ShareVideo"
-                  android:label="Share Video - Betavine Chronicle Client">
-        </activity>
     </application>
     <uses-sdk android:minSdkVersion="4" />
 	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"></uses-permission>

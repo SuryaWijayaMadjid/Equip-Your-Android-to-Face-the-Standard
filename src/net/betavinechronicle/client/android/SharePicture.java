@@ -484,6 +484,7 @@ public class SharePicture extends Activity {
 	    				}
 	    				
 	    				AtomEntry atomEntry = null;
+	    				
 	    				try {
 	    					// GET THE ENTRY RESPONSE AND PARSE IT	    					
 							XmlPullParserFactory xppFactory = XmlPullParserFactory.newInstance();

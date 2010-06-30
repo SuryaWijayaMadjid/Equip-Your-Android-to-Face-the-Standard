@@ -66,7 +66,6 @@ public class UserStream extends ListActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {  
     	super.onCreate(savedInstanceState);
-    	//Debug.startMethodTracing("tracer");
     	
         mPorter = (Porter) this.getApplication();
     	mPostItems = new ArrayList<PostItem>();
@@ -99,7 +98,7 @@ public class UserStream extends ListActivity {
 			}
 		});
 
-        //mPorter.resetPreferences();
+        mPorter.resetPreferences();
         if (mPorter.isPreferenceSet()) {
         	this.loadSetup();
         	this.requestFeeds(mPorter.loadPreferenceString(
@@ -107,12 +106,6 @@ public class UserStream extends ListActivity {
         }
         else
         	this.configureSettings();
-    }
-    
-    @Override
-    protected void onDestroy() {
-    	//Debug.stopMethodTracing();
-    	super.onDestroy();
     }
     
     @Override
@@ -652,8 +645,12 @@ public class UserStream extends ListActivity {
 			        	
 			        	runtime = System.currentTimeMillis();
 			        	
+			        	//Debug.startMethodTracing("parser");
+			        	
 			        	feed = mXppActReader.parse(mPorter.prepareXppWithInputStream(
 			        			this.getHttpResponse().getEntity().getContent()));
+
+			        	//Debug.stopMethodTracing();
 			        	
 			        	runtime = System.currentTimeMillis() - runtime;
 			        	Log.d("UserStream[requestFeeds()]", "FEED-PARSING execution time: " + runtime + "ms.");
@@ -927,7 +924,7 @@ public class UserStream extends ListActivity {
 		public void run() {
 			if (mProgressDialog != null) mProgressDialog.dismiss();
 			new AlertDialog.Builder(UserStream.this)
-			.setTitle("Sharing new Audio")
+			.setTitle("User's Stream")
 			.setMessage(mAlertMessage)
 			.setCancelable(true)
 			.setPositiveButton("OK", null)

@@ -10,6 +10,7 @@
 		android:layout_height="25dip"
 		android:layout_alignParentLeft="true"
 		android:layout_alignParentTop="true"
+		android:paddingRight="5dip"
 		android:scaleType="centerInside"
 		/>
 	<ImageView android:id="@+id/userStream_listItem_sourceIcon"
@@ -18,6 +19,7 @@
 		android:layout_below="@id/userStream_listItem_typeIcon"
 		android:layout_alignParentLeft="true"
 		android:layout_alignWithParentIfMissing="true"
+		android:paddingRight="5dip"
 		android:scaleType="centerInside"
 		/>
 	<TextView android:id="@+id/userStream_listItem_title"
@@ -39,24 +41,5 @@
 		android:paddingLeft="10dip"
 		>
 	</RelativeLayout>
-	<!--TextView android:id="@+id/userStream_listItem_content"
-		android:layout_width="fill_parent"
-		android:layout_height="wrap_content"
-		android:layout_toRightOf="@id/userStream_listItem_typeIcon"
-		android:layout_below="@id/userStream_listItem_title"
-		android:layout_weight="1"
-		android:paddingLeft="10dip"
-		/>
-	<ImageView android:id="@+id/userStream_listItem_imagePreview"
-		android:layout_width="wrap_content"
-		android:layout_height="wrap_content"
-		android:maxWidth="75dip"
-		android:maxHeight="75dip"
-		android:layout_toRightOf="@id/userStream_listItem_typeIcon"
-		android:layout_below="@id/userStream_listItem_content"
-		android:layout_alignWithParentIfMissing="true"
-		android:scaleType="centerInside"
-		android:paddingLeft="10dip"
-		/-->
 		
 </RelativeLayout>
